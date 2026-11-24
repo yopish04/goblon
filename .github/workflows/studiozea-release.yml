@@ -1,0 +1,242 @@
+name: StudioZea release
+
+# Builds and releases StudioZea from the PRIVATE repo yopish04/studiozea. This repo is
+# public, so its GitHub Actions minutes are free (no monthly limit); the source code is
+# never committed here, it is checked out with a token only for the duration of a job.
+#
+# Release = the version in app/src-tauri/tauri.conf.json (studiozea, default branch) is
+# not yet a tag in the public yopish04/studiozea-update. Checked every 3 hours and on
+# "Run workflow". "Run workflow" with nothing new to release makes a test build only
+# (installers as an artifact of the run, nothing published).
+#
+# Secrets of THIS repo (Settings > Secrets and variables > Actions):
+#   STUDIOZEA_TOKEN                     fine-grained token: studiozea Contents read
+#                                       (+ studiozea-update Contents read/write if it
+#                                       also replaces UPDATE_REPO_TOKEN)
+#   UPDATE_REPO_TOKEN                   studiozea-update Contents read/write
+#                                       (optional when STUDIOZEA_TOKEN covers it)
+#   TAURI_SIGNING_PRIVATE_KEY           content of studiozea-update.key
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD  only if the key has a password
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "studiozea branch / tag / commit (empty = default branch)"
+        required: false
+        default: ""
+  schedule:
+    - cron: "23 */3 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: studiozea-release
+  cancel-in-progress: false
+
+env:
+  SRC_REPO: yopish04/studiozea
+  UPDATE_REPO: yopish04/studiozea-update
+
+jobs:
+  release-check:
+    name: Release needed?
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.c.outputs.release }}
+      version: ${{ steps.c.outputs.version }}
+      sha: ${{ steps.c.outputs.sha }}
+    steps:
+      - name: Secrets present?
+        env:
+          HAS_SRC: ${{ secrets.STUDIOZEA_TOKEN != '' }}
+        run: |
+          if [[ $HAS_SRC != true ]]; then
+            echo "::error::secret STUDIOZEA_TOKEN is missing (see the top of this workflow)"
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SRC_REPO }}
+          ref: ${{ inputs.ref }}
+          token: ${{ secrets.STUDIOZEA_TOKEN }}
+          sparse-checkout: app/src-tauri/tauri.conf.json
+          sparse-checkout-cone-mode: false
+      - id: c
+        env:
+          HAS_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+          HAS_UPD: ${{ secrets.UPDATE_REPO_TOKEN != '' || secrets.STUDIOZEA_TOKEN != '' }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          v=$(node -p "require('./app/src-tauri/tauri.conf.json').version")
+          sha=$(git rev-parse HEAD)
+          release=false
+          if git ls-remote --exit-code --tags "https://github.com/$UPDATE_REPO" "refs/tags/v$v" >/dev/null; then
+            echo "v$v is already published"
+          else
+            release=true
+          fi
+          if [[ $release == true && ( $HAS_KEY != true || $HAS_UPD != true ) ]]; then
+            echo "::warning::v$v is not published yet, but TAURI_SIGNING_PRIVATE_KEY / UPDATE_REPO_TOKEN are missing"
+            release=false
+          fi
+          echo "version $v, commit $sha, release $release"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+
+  engine-tests:
+    name: Engine tests (${{ matrix.os }})
+    needs: release-check
+    if: needs.release-check.outputs.release == 'true' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SRC_REPO }}
+          ref: ${{ needs.release-check.outputs.sha }}
+          token: ${{ secrets.STUDIOZEA_TOKEN }}
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: engine
+      - name: Golden tests (pixel-identical to prototype/studiozea_ref.py)
+        if: runner.os != 'Windows'
+        run: cargo test --release -p studiozea-engine -- --nocapture
+      # The two GPU upscale tests crash the Windows runner's software renderer (WARP,
+      # "Microsoft Basic Render Driver": STATUS_ACCESS_VIOLATION when both run at once).
+      # They run on Linux above (llvmpipe); on Windows they run one at a time afterwards
+      # and only report, so a runner driver crash does not block a release.
+      - name: Golden tests (Windows, without the GPU upscale tests)
+        if: runner.os == 'Windows'
+        run: cargo test --release -p studiozea-engine -- --nocapture --skip graphics_card_gives_the_processor_result --skip a_failing_card_hands_over_to_the_processor
+      - name: GPU upscale tests on the Windows runner (report only)
+        if: runner.os == 'Windows'
+        continue-on-error: true
+        run: cargo test --release -p studiozea-engine --test upscale -- --nocapture --test-threads=1 graphics_card a_failing_card
+
+  windows-installer:
+    name: Windows installer (.exe / .msi)
+    needs: [release-check, engine-tests]
+    if: needs.release-check.outputs.release == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    env:
+      RELEASE: ${{ needs.release-check.outputs.release }}
+      VERSION: ${{ needs.release-check.outputs.version }}
+      TAG: v${{ needs.release-check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.SRC_REPO }}
+          ref: ${{ needs.release-check.outputs.sha }}
+          token: ${{ secrets.STUDIOZEA_TOKEN }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: app
+      - name: Install frontend dependencies
+        working-directory: app
+        run: npm ci
+      - name: Build installer (test build, unsigned)
+        if: env.RELEASE != 'true'
+        working-directory: app
+        run: npx tauri build
+      # the key is one long base64 line; a key pasted with line breaks or a trailing
+      # newline failed before ("failed to decode base64 key: Invalid symbol 10"), so all
+      # whitespace is removed before use
+      - name: Build signed installer + update
+        if: env.RELEASE == 'true'
+        working-directory: app
+        shell: pwsh
+        env:
+          RAW_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          node -e "const f='src-tauri/tauri.conf.json',fs=require('fs');const c=JSON.parse(fs.readFileSync(f));c.version=process.argv[1];fs.writeFileSync(f,JSON.stringify(c,null,2))" $env:VERSION
+          $env:TAURI_SIGNING_PRIVATE_KEY = ($env:RAW_KEY -replace '\s', '')
+          Write-Host "version $env:VERSION, key length $($env:TAURI_SIGNING_PRIVATE_KEY.Length)"
+          npx tauri build --config src-tauri/tauri.updater.conf.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Collect installers
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force out | Out-Null
+          Copy-Item target/release/bundle/nsis/*.exe out/
+          Copy-Item target/release/bundle/msi/*.msi out/
+          Copy-Item target/release/studiozea-app.exe out/StudioZea-portable.exe
+          Get-ChildItem out | Format-Table Name, Length
+      - name: Update feed (latest.json)
+        if: env.RELEASE == 'true'
+        shell: pwsh
+        run: |
+          $v = $env:VERSION
+          $exe = Get-ChildItem target/release/bundle/nsis/*-setup.exe | Select-Object -First 1
+          $sig = Get-Content "$($exe.FullName).sig" -Raw
+          $notes = (Get-Content RILIS.md -Raw).Trim()
+          $feed = [ordered]@{
+            version = $v
+            notes = $notes
+            pub_date = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+            platforms = [ordered]@{
+              'windows-x86_64' = [ordered]@{
+                signature = $sig.Trim()
+                url = "https://github.com/$($env:UPDATE_REPO)/releases/download/$($env:TAG)/$($exe.Name)"
+              }
+            }
+          }
+          New-Item -ItemType Directory -Force upd | Out-Null
+          $feed | ConvertTo-Json -Depth 5 | Set-Content upd/latest.json -Encoding utf8
+          Copy-Item $exe.FullName upd/
+          Copy-Item target/release/bundle/msi/*.msi upd/
+          Copy-Item RILIS.md upd-notes.md
+          Get-Content upd/latest.json
+      - name: Smoke test (the app starts and opens its window)
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath out/StudioZea-portable.exe -PassThru
+          $title = ''
+          for ($i = 0; $i -lt 30 -and -not $title; $i++) {
+            Start-Sleep -Seconds 2
+            $p.Refresh()
+            $title = $p.MainWindowTitle
+          }
+          Write-Host "window title: '$title'"
+          if ($p.HasExited) { throw "app exited with code $($p.ExitCode)" }
+          Stop-Process -Id $p.Id -Force
+          if (-not $title.StartsWith('StudioZea')) { throw 'main window did not open' }
+      - name: CLI smoke test on Windows (golden input -> PNG)
+        shell: pwsh
+        run: |
+          cargo build --release -p studiozea-engine --bin studiozea-cli
+          target/release/studiozea-cli.exe engine/tests/golden/in_art_black.png out-test.png --kaos hitam --lpi 35 --lebar-cm 10 --trim
+          if (-not (Test-Path out-test.png)) { throw 'no output' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: StudioZea-windows-${{ needs.release-check.outputs.version }}
+          path: out/*
+          retention-days: 14
+      # public download page + update feed; installed apps read
+      # releases/latest/download/latest.json from here
+      - name: Publish update (public studiozea-update)
+        if: env.RELEASE == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: ${{ env.UPDATE_REPO }}
+          token: ${{ secrets.UPDATE_REPO_TOKEN || secrets.STUDIOZEA_TOKEN }}
+          tag_name: ${{ env.TAG }}
+          name: StudioZea ${{ env.TAG }}
+          make_latest: true
+          body_path: upd-notes.md
+          files: upd/*
