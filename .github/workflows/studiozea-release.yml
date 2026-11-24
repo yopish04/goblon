@@ -1,42 +1,35 @@
-name: StudioZea release
+name: StudioZea build & release
 
-# Builds and releases StudioZea from the PRIVATE repo yopish04/studiozea. This repo is
-# public, so its GitHub Actions minutes are free (no monthly limit); the source code is
-# never committed here, it is checked out with a token only for the duration of a job.
+# The StudioZea code lives in this public repo, so GitHub Actions minutes are free
+# (no monthly limit, Windows included).
 #
-# Release = the version in app/src-tauri/tauri.conf.json (studiozea, default branch) is
-# not yet a tag in the public yopish04/studiozea-update. Checked every 3 hours and on
-# "Run workflow". "Run workflow" with nothing new to release makes a test build only
-# (installers as an artifact of the run, nothing published).
+# Every push / pull request / "Run workflow": engine tests (Linux + Windows) and a Windows
+# test build (installers as an artifact of the run).
+# Release = on the default branch, the version in app/src-tauri/tauri.conf.json is not yet
+# a tag in the public yopish04/studiozea-update (checked on push and daily). A release
+# needs the secrets below; without them only the test build is made.
 #
-# Secrets of THIS repo (Settings > Secrets and variables > Actions):
-#   STUDIOZEA_TOKEN                     fine-grained token: studiozea Contents read
-#                                       (+ studiozea-update Contents read/write if it
-#                                       also replaces UPDATE_REPO_TOKEN)
-#   UPDATE_REPO_TOKEN                   studiozea-update Contents read/write
-#                                       (optional when STUDIOZEA_TOKEN covers it)
+# Secrets (Settings > Secrets and variables > Actions):
 #   TAURI_SIGNING_PRIVATE_KEY           content of studiozea-update.key
 #   TAURI_SIGNING_PRIVATE_KEY_PASSWORD  only if the key has a password
+#   UPDATE_REPO_TOKEN                   fine-grained token, studiozea-update Contents read/write
 
 on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
   workflow_dispatch:
-    inputs:
-      ref:
-        description: "studiozea branch / tag / commit (empty = default branch)"
-        required: false
-        default: ""
   schedule:
-    - cron: "23 */3 * * *"
+    - cron: "23 1 * * *"
 
 permissions:
   contents: read
 
 concurrency:
-  group: studiozea-release
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  SRC_REPO: yopish04/studiozea
   UPDATE_REPO: yopish04/studiozea-update
 
 jobs:
@@ -48,37 +41,27 @@ jobs:
       version: ${{ steps.c.outputs.version }}
       sha: ${{ steps.c.outputs.sha }}
     steps:
-      - name: Secrets present?
-        env:
-          HAS_SRC: ${{ secrets.STUDIOZEA_TOKEN != '' }}
-        run: |
-          if [[ $HAS_SRC != true ]]; then
-            echo "::error::secret STUDIOZEA_TOKEN is missing (see the top of this workflow)"
-            exit 1
-          fi
       - uses: actions/checkout@v4
-        with:
-          repository: ${{ env.SRC_REPO }}
-          ref: ${{ inputs.ref }}
-          token: ${{ secrets.STUDIOZEA_TOKEN }}
-          sparse-checkout: app/src-tauri/tauri.conf.json
-          sparse-checkout-cone-mode: false
       - id: c
         env:
           HAS_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
-          HAS_UPD: ${{ secrets.UPDATE_REPO_TOKEN != '' || secrets.STUDIOZEA_TOKEN != '' }}
+          HAS_UPD: ${{ secrets.UPDATE_REPO_TOKEN != '' }}
           EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          DEFAULT_REF: refs/heads/${{ github.event.repository.default_branch }}
         run: |
           v=$(node -p "require('./app/src-tauri/tauri.conf.json').version")
           sha=$(git rev-parse HEAD)
           release=false
-          if git ls-remote --exit-code --tags "https://github.com/$UPDATE_REPO" "refs/tags/v$v" >/dev/null; then
+          if [[ "$REF" != "$DEFAULT_REF" || "$EVENT" == pull_request ]]; then
+            echo "not the default branch: test build only"
+          elif git ls-remote --exit-code --tags "https://github.com/$UPDATE_REPO" "refs/tags/v$v" >/dev/null; then
             echo "v$v is already published"
           else
             release=true
           fi
           if [[ $release == true && ( $HAS_KEY != true || $HAS_UPD != true ) ]]; then
-            echo "::warning::v$v is not published yet, but TAURI_SIGNING_PRIVATE_KEY / UPDATE_REPO_TOKEN are missing"
+            echo "::warning::v$v is not published yet, but the secrets TAURI_SIGNING_PRIVATE_KEY / UPDATE_REPO_TOKEN are missing: test build only"
             release=false
           fi
           echo "version $v, commit $sha, release $release"
@@ -89,7 +72,7 @@ jobs:
   engine-tests:
     name: Engine tests (${{ matrix.os }})
     needs: release-check
-    if: needs.release-check.outputs.release == 'true' || github.event_name == 'workflow_dispatch'
+    if: github.event_name != 'schedule' || needs.release-check.outputs.release == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -97,11 +80,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          repository: ${{ env.SRC_REPO }}
-          ref: ${{ needs.release-check.outputs.sha }}
-          token: ${{ secrets.STUDIOZEA_TOKEN }}
-          persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
@@ -124,7 +102,7 @@ jobs:
   windows-installer:
     name: Windows installer (.exe / .msi)
     needs: [release-check, engine-tests]
-    if: needs.release-check.outputs.release == 'true' || github.event_name == 'workflow_dispatch'
+    if: github.event_name != 'schedule' || needs.release-check.outputs.release == 'true'
     runs-on: windows-latest
     env:
       RELEASE: ${{ needs.release-check.outputs.release }}
@@ -132,11 +110,6 @@ jobs:
       TAG: v${{ needs.release-check.outputs.version }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          repository: ${{ env.SRC_REPO }}
-          ref: ${{ needs.release-check.outputs.sha }}
-          token: ${{ secrets.STUDIOZEA_TOKEN }}
-          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -234,7 +207,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           repository: ${{ env.UPDATE_REPO }}
-          token: ${{ secrets.UPDATE_REPO_TOKEN || secrets.STUDIOZEA_TOKEN }}
+          token: ${{ secrets.UPDATE_REPO_TOKEN }}
           tag_name: ${{ env.TAG }}
           name: StudioZea ${{ env.TAG }}
           make_latest: true

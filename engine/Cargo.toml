@@ -1,0 +1,42 @@
+[package]
+name = "studiozea-engine"
+version = "0.1.0"
+edition = "2021"
+description = "StudioZea DTF prepress engine (halftone, background removal, print-ready PNG)"
+license = "UNLICENSED"
+
+[lib]
+name = "studiozea_engine"
+path = "src/lib.rs"
+
+[[bin]]
+name = "studiozea-cli"
+path = "src/bin/cli.rs"
+
+[[bin]]
+name = "studiozea-testsheet"
+path = "src/bin/testsheet.rs"
+
+[dependencies]
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "tiff", "bmp"] }
+png = "0.17"
+rayon = "1.10"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+gemm = { version = "0.19", default-features = false, features = ["std", "x86-v4"] }
+# AI upscale on the graphics card (DirectX 12 / Vulkan / Metal), CPU fallback
+wgpu = { version = "30", optional = true, default-features = false, features = ["std", "wgsl", "dx12", "vulkan", "metal"] }
+pollster = { version = "1", optional = true }
+# "Lindungi teks": text detector (ONNX) in pure Rust
+tract-onnx = "0.23"
+
+[features]
+default = ["gpu"]
+gpu = ["dep:wgpu", "dep:pollster"]
+
+[dev-dependencies]
+sha2 = "0.10"
+# the GPU shader must translate for DirectX 12 (HLSL), Metal and Vulkan (SPIR-V)
+naga = { version = "30", features = ["wgsl-in", "hlsl-out", "msl-out", "spv-out"] }

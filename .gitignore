@@ -1,0 +1,13 @@
+# Gambar referensi/desain klien: jangan di-commit
+refs/
+*.psd
+node_modules/
+target/
+dist/
+__pycache__/
+prototype/hasil_uji.json
+prototype/*.png
+target/
+node_modules/
+app/dist/
+app/src-tauri/gen/

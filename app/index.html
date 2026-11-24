@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <style>
+      html, body { background: #121a15; }
+      html[data-theme="light"], html[data-theme="light"] body { background: #f4efe4; }
+    </style>
+    <script>
+      // the theme before the first paint (see src/theme.js), so the window does not flash
+      (function () {
+        var c = 'otomatis'
+        try { c = localStorage.getItem('sz-theme') || c } catch (e) {}
+        var dark = c === 'gelap' || (c !== 'terang' && !(window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches))
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+      })()
+    </script>
+    <title>StudioZea</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

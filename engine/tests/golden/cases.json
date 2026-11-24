@@ -1,0 +1,1734 @@
+[
+ {
+  "name": "hitam_bulat35_rapi",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 35,
+   "shape": "bulat",
+   "grid": "rapi"
+  },
+  "sha256": "75477cf66382d89a8fdc25aa403ffb3b881b6055c685451d110b73adc8288160",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "hitam_kotak55",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 55,
+   "shape": "kotak"
+  },
+  "sha256": "3c4cb08bbe00a39a4aafa724428b8aad02fa5be681a0ba20db24774c19cef3ab",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "hitam_silang85",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 85,
+   "shape": "silang"
+  },
+  "sha256": "0720d43eb5aeed2f9cce18753a46b2a8b111d17a07a102f42008b83e5e1c35a7",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "hitam_garis25",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 25,
+   "shape": "garis"
+  },
+  "sha256": "c6e7359c9d40281c43de236b23a7c5e06a0ef02a595d9920e481e8283f9ae0fa",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "putih_bulat35_rapi",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 35,
+   "shape": "bulat",
+   "grid": "rapi"
+  },
+  "sha256": "bb5f14dbe1d8b387064ecc3b1c50e7ff48b76721af661a9acdc4b08ae35bb16c",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "putih_elips65",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 65,
+   "shape": "elips"
+  },
+  "sha256": "fcd285f898499472be2ed8b8b396929f3881565d9aaa3d661bcfc1fdd0f2f844",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "putih_berlian45",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 45,
+   "shape": "berlian"
+  },
+  "sha256": "069388e3231414b147cf0ab89003879270c2ea1dd698caf010a9aa06590aa28c",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "putih_gcr35",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 35,
+   "k": "gcr",
+   "grid": "rapi"
+  },
+  "sha256": "203a0fcd3a203858e03015db0244831cda0dda9cb5c557044f3ede2e5da433fe",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "putih_kgaris35",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 35,
+   "k": "garis",
+   "grid": "rapi"
+  },
+  "sha256": "5d2e88fc30e681bd4499ce085ebb1ac7413dfb46f477672c79f89b13d6eda021",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "hitam_bulatmurni40_600dpi",
+  "input": "in_ramp.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 40,
+   "shape": "bulat-murni",
+   "dpi": 600
+  },
+  "sha256": "823523ef02de71b566b98dcab4d9b155213524dfc53ddc7bb3ef2696122ce963",
+  "width": 1200,
+  "height": 80,
+  "autotrim": [
+   73,
+   0,
+   1200,
+   80
+  ]
+ },
+ {
+  "name": "putih_ramp30",
+  "input": "in_ramp.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 30,
+   "shape": "bulat"
+  },
+  "sha256": "840c1f1aee12ab8b1561df9105357852105a8f44a2258caee262bb281d7da609",
+  "width": 1200,
+  "height": 80,
+  "autotrim": [
+   0,
+   0,
+   1127,
+   80
+  ]
+ },
+ {
+  "name": "hitam_art_tepi",
+  "input": "in_art_black.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 35,
+   "grid": "rapi",
+   "edges": true
+  },
+  "sha256": "4aab37957d8650eb75a16a49476de4896252d11188d0f7fbdd82239cf433357a",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   35,
+   0,
+   866,
+   700
+  ]
+ },
+ {
+  "name": "putih_art_tepi",
+  "input": "in_art_white.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 35,
+   "grid": "rapi",
+   "edges": true
+  },
+  "sha256": "5b075a05712358d8a3dfd5e7d7b3853b1a7cd0b41ffe494b48b81d3ae6a694a9",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   29,
+   0,
+   872,
+   700
+  ]
+ },
+ {
+  "name": "hitam_art_fm",
+  "input": "in_art_black.png",
+  "params": {
+   "shirt": "hitam",
+   "pattern": "fm"
+  },
+  "sha256": "4921c9e31bceea7d4f938c296bf245ab1a5b025953d94f700054c146aa148286",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   35,
+   0,
+   866,
+   700
+  ]
+ },
+ {
+  "name": "putih_art_grain",
+  "input": "in_art_white.png",
+  "params": {
+   "shirt": "putih",
+   "pattern": "grain-sedang"
+  },
+  "sha256": "94f7c1be97cd110a8bff6a65a83ec57d9ae7ef5e14046159ab1d6db4a6fdb88d",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   29,
+   0,
+   872,
+   700
+  ]
+ },
+ {
+  "name": "hitam_art_grainkasar",
+  "input": "in_art_black.png",
+  "params": {
+   "shirt": "hitam",
+   "pattern": "grain-kasar"
+  },
+  "sha256": "15551973df955a9f752e38bc211a9581ba84841f1edd8a30b18e80112968c5b5",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   35,
+   0,
+   866,
+   700
+  ]
+ },
+ {
+  "name": "navy_rgba",
+  "input": "in_art_rgba.png",
+  "params": {
+   "shirt": [
+    0.10980392156862745,
+    0.1450980392156863,
+    0.2549019607843137
+   ],
+   "lpi": 35,
+   "grid": "rapi"
+  },
+  "sha256": "485b992647aa972077ab7a8e62d5c20e96eb086b76871a94be8bd81206907da0",
+  "width": 700,
+  "height": 500,
+  "autotrim": [
+   58,
+   48,
+   671,
+   461
+  ]
+ },
+ {
+  "name": "merah_rgba_knockout",
+  "input": "in_art_rgba.png",
+  "params": {
+   "shirt": [
+    0.6901960784313725,
+    0.11764705882352941,
+    0.1568627450980392
+   ],
+   "lpi": 35,
+   "grid": "rapi",
+   "knockout": 0.25
+  },
+  "sha256": "e96e9293f9d956543a76a551de4657b5920b4b4d8541a05100817ed8dd781cc0",
+  "width": 700,
+  "height": 500,
+  "autotrim": [
+   58,
+   48,
+   671,
+   461
+  ]
+ },
+ {
+  "name": "putih_rgba",
+  "input": "in_art_rgba.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 35,
+   "grid": "rapi"
+  },
+  "sha256": "7325741eae53a07dea4da3dff315d696feca11c1ac3005a2b5fbfa75a37dfcfc",
+  "width": 700,
+  "height": 500,
+  "autotrim": [
+   60,
+   49,
+   671,
+   461
+  ]
+ },
+ {
+  "name": "teal_hapusbg_putih",
+  "input": "in_art_teal.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 35,
+   "grid": "rapi",
+   "remove_bg": true
+  },
+  "sha256": "37299c0d5fecce12b04b436caac189da40089044aed79e5126db9636d3e5ab7c",
+  "width": 700,
+  "height": 500,
+  "autotrim": [
+   60,
+   50,
+   642,
+   432
+  ],
+  "bg": [
+   0.16862745583057404,
+   0.47058823704719543,
+   0.501960813999176
+  ]
+ },
+ {
+  "name": "navy_hapusbg_warna",
+  "input": "in_art_navy.png",
+  "params": {
+   "shirt": [
+    0.06274509803921569,
+    0.09803921568627451,
+    0.23921568627450981
+   ],
+   "lpi": 35,
+   "grid": "rapi",
+   "remove_bg": true
+  },
+  "sha256": "ff7adbf3194944c3944670aa7289ea6dbc7e23fcae53f2ff41a8efc1e354d8f4",
+  "width": 700,
+  "height": 500,
+  "autotrim": [
+   23,
+   0,
+   700,
+   500
+  ],
+  "bg": [
+   0.06666667014360428,
+   0.09803921729326248,
+   0.24313725531101227
+  ]
+ },
+ {
+  "name": "resize_up_hitam",
+  "input": "in_art_rgba.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 35,
+   "grid": "rapi",
+   "resize": [
+    959,
+    685
+   ]
+  },
+  "sha256": "0b5475dae81e3fbdc905b4fa42889280ba61dac175cd5e8ee7114f3467597149",
+  "width": 959,
+  "height": 685,
+  "autotrim": [
+   80,
+   66,
+   881,
+   593
+  ]
+ },
+ {
+  "name": "resize_down_putih",
+  "input": "in_art_black.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 45,
+   "resize": [
+    549,
+    427
+   ]
+  },
+  "sha256": "4002734e9dbd4002a9b265ec24b0c770cb8608a0d1ef09414ce91bad665d68aa",
+  "width": 549,
+  "height": 427,
+  "autotrim": [
+   0,
+   0,
+   549,
+   427
+  ]
+ },
+ {
+  "name": "hitam_gelombang35",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 35,
+   "shape": "gelombang"
+  },
+  "sha256": "986e8f884e5ce8f5c191ca1f10fe4ced439445560f1cb3574dce0dfe4eafbecc",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "putih_gelombang25_rapi",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 25,
+   "shape": "gelombang",
+   "grid": "rapi"
+  },
+  "sha256": "b10bfb5979709c1b082fcbbf9000ecedbdde292972259395e5a5fd3c9624a113",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "putih_gelombang55_600dpi",
+  "input": "in_ramp.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 55,
+   "shape": "gelombang",
+   "dpi": 600
+  },
+  "sha256": "1a964e4eaf19114b05c030f0832b88d81b72289f8166a6b4c9528c83068d970c",
+  "width": 1200,
+  "height": 80,
+  "autotrim": [
+   0,
+   0,
+   1127,
+   80
+  ]
+ },
+ {
+  "name": "hitam_arsir25_rapi",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 25,
+   "shape": "arsir",
+   "grid": "rapi"
+  },
+  "sha256": "e6f6502a19aee0d08b6982cf6c495b1d911820e86881202f78d10c68519d0edf",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "putih_arsir45",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 45,
+   "shape": "arsir"
+  },
+  "sha256": "1b52f7b58332a155eeeb9c54d33a3b7563ce6e2c86fa83ce84cbe9ee6d47fcc2",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "hitam_arsir65_600dpi",
+  "input": "in_ramp.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 65,
+   "shape": "arsir",
+   "dpi": 600
+  },
+  "sha256": "6481ed046a4d81da4d34db58db3d1238d48754850a051293b52529be5b271d5d",
+  "width": 1200,
+  "height": 80,
+  "autotrim": [
+   73,
+   0,
+   1200,
+   80
+  ]
+ },
+ {
+  "name": "hitam_kasar35_rapi",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 35,
+   "shape": "kasar",
+   "grid": "rapi"
+  },
+  "sha256": "7779cd8ee38514459da20f32a10155498b21b8b5791ad7889e35a7f1634bae72",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "putih_kasar55",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 55,
+   "shape": "kasar"
+  },
+  "sha256": "6b3fc74c1c679bc8fdf4634ff9f7d6d42b148133262ab64009d18a56d9fb834b",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "hitam_kasar45_600dpi_rapi",
+  "input": "in_ramp.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 45,
+   "shape": "kasar",
+   "dpi": 600,
+   "grid": "rapi"
+  },
+  "sha256": "00817d60f54c21a0db6b40007eb26a4cbf830d468d8fcef31ba87580b2d0f459",
+  "width": 1200,
+  "height": 80,
+  "autotrim": [
+   73,
+   0,
+   1200,
+   80
+  ]
+ },
+ {
+  "name": "putih_art_kasar_gcr",
+  "input": "in_art_white.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 35,
+   "shape": "kasar",
+   "grid": "rapi",
+   "k": "gcr",
+   "edges": true
+  },
+  "sha256": "54ce7b5c096adf4bab3da5b4335e988db5e3e34f0806bd9b971a22cf2d817381",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   29,
+   0,
+   872,
+   700
+  ]
+ },
+ {
+  "name": "navy_rgba_arsir",
+  "input": "in_art_rgba.png",
+  "params": {
+   "shirt": [
+    0.10980392156862745,
+    0.1450980392156863,
+    0.2549019607843137
+   ],
+   "lpi": 30,
+   "shape": "arsir"
+  },
+  "sha256": "4cc369072dc49a93ef69506d046b6707855fa7e15d8ba2a47cdec10e907a67b4",
+  "width": 700,
+  "height": 500,
+  "autotrim": [
+   58,
+   48,
+   671,
+   461
+  ]
+ },
+ {
+  "name": "putih_bulat35_150dpi",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 35,
+   "dpi": 150
+  },
+  "sha256": "cba30d96761021403ca04e34cd7d3e8818596b63fce44a220132d02e5a2ea018",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "hitam_elips30_200dpi",
+  "input": "in_art_black.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 30,
+   "shape": "elips",
+   "dpi": 200
+  },
+  "sha256": "6e3f681ca3c4ccdd13b6fc030070e29f5fd9b1b88bb7d226a62650f76b52172a",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   35,
+   0,
+   866,
+   700
+  ]
+ },
+ {
+  "name": "putih_bulat35_sudut45",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 35,
+   "angle": 45
+  },
+  "sha256": "5930a982a3e1432f0db59f5c0c44e64b6a4f33fdd3a70141830624f06e19c800",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "putih_dotondot35",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 35,
+   "rosette": false
+  },
+  "sha256": "1ea6679a4cbe7522c5cdf2aa0ce4cb2b6aac46fac1f53e87343a1294054827dc",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "hitam_rosette30_sudut15",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 30,
+   "angle": 15,
+   "rosette": true
+  },
+  "sha256": "70815a6bc61b4839a1eb76e8a8ec9c5b3316ee33f4a5766f213e4277ff9e5191",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "hitam_bulat5_besar",
+  "input": "in_art_black.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 5
+  },
+  "sha256": "c5f56e56cb382409308c88e2179647ae4c5816ce74eb395497300e33cdb4c0f2",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   35,
+   0,
+   866,
+   700
+  ]
+ },
+ {
+  "name": "putih_garis8_600dpi_sudut120",
+  "input": "in_ramp.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 8,
+   "shape": "garis",
+   "dpi": 600,
+   "angle": 120
+  },
+  "sha256": "c4d2752d48fac3f73ccb3250802c8af2841995c275bd40c36dd0d5623f6c99dd",
+  "width": 1200,
+  "height": 80,
+  "autotrim": [
+   0,
+   0,
+   1127,
+   80
+  ]
+ },
+ {
+  "name": "hitam_kasar6",
+  "input": "in_art_black.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 6,
+   "shape": "kasar"
+  },
+  "sha256": "57d6cd908fcb8bed8b8ea22611521c7adbf2b767c69583010f25f338a24bd649",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   35,
+   0,
+   866,
+   700
+  ]
+ },
+ {
+  "name": "navy_elips12_sudut75",
+  "input": "in_art_rgba.png",
+  "params": {
+   "shirt": [
+    0.10980392156862745,
+    0.1450980392156863,
+    0.2549019607843137
+   ],
+   "lpi": 12,
+   "shape": "elips",
+   "angle": 75
+  },
+  "sha256": "9daffd72c0d6c80724420b24cf8e361f4f23f436c490de5f01a228b993b79199",
+  "width": 700,
+  "height": 500,
+  "autotrim": [
+   58,
+   48,
+   671,
+   461
+  ]
+ },
+ {
+  "name": "hitam_bintang6",
+  "input": "in_art_black.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 6,
+   "shape": "bintang",
+   "angle": 0
+  },
+  "sha256": "cefd995ee9f00b25de9830eb73932e1f9eb1452a3c93d989e0969475b5b61640",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   35,
+   0,
+   866,
+   700
+  ]
+ },
+ {
+  "name": "putih_segitiga12_sudut30",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 12,
+   "shape": "segitiga",
+   "angle": 30
+  },
+  "sha256": "6400168b40d13625261602fb53877cbe3242b4b48ea2eb1a9b7a811bd5fd9365",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "putih_segitiga20_sudut200",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 20,
+   "shape": "segitiga",
+   "angle": 200
+  },
+  "sha256": "5cbcf108e04b709b099246bad5b5c410f39c2c3a2778acaf7fcfcb15000eab3c",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "hitam_rantai25_600dpi",
+  "input": "in_ramp.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 25,
+   "shape": "rantai",
+   "dpi": 600
+  },
+  "sha256": "edbbb8373214fb3b869e92e4da97d7ac34411b5d5c512d4709f94d40aa3494af",
+  "width": 1200,
+  "height": 80,
+  "autotrim": [
+   73,
+   0,
+   1200,
+   80
+  ]
+ },
+ {
+  "name": "putih_bintang18_rapi",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 18,
+   "shape": "bintang",
+   "grid": "rapi"
+  },
+  "sha256": "07cb25a9998dfdaf9bbe80bc5c4a90f638a93b417fcfe140ed8219a24e16d4ee",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "hitam_gradasi50",
+  "input": "in_art_black.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 35,
+   "grid": "rapi",
+   "halftone_area": 0.5
+  },
+  "sha256": "9be27c7710d549c70528b9f16c22647f5f86cfa4fe0a7e1a3ac5f957549438fc",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   35,
+   0,
+   866,
+   700
+  ]
+ },
+ {
+  "name": "putih_gradasi30",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 35,
+   "halftone_area": 0.3
+  },
+  "sha256": "1dab9ead68617a021fbb4ed12e8f908ad1e6fc9c1bfee80b0939f5be5a606794",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "navy_gradasi60_knockout",
+  "input": "in_art_rgba.png",
+  "params": {
+   "shirt": [
+    0.10980392156862745,
+    0.1450980392156863,
+    0.2549019607843137
+   ],
+   "lpi": 35,
+   "grid": "rapi",
+   "knockout": 0.2,
+   "halftone_area": 0.6
+  },
+  "sha256": "c938369f59b15cda84c827641bec2514d007c18e471f7ee65158396a0a8d32a6",
+  "width": 700,
+  "height": 500,
+  "autotrim": [
+   58,
+   48,
+   671,
+   461
+  ]
+ },
+ {
+  "name": "hitam_gradasi100_fm",
+  "input": "in_art_black.png",
+  "params": {
+   "shirt": "hitam",
+   "pattern": "fm",
+   "halftone_area": 1.0
+  },
+  "sha256": "35d84313a7336f109a1cc8655f7dbed0c79e2a45717d16cc9f43b5e30c7f8c1f",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   35,
+   0,
+   866,
+   700
+  ]
+ },
+ {
+  "name": "putih_gradasi40_grain_tepi",
+  "input": "in_art_white.png",
+  "params": {
+   "shirt": "putih",
+   "pattern": "grain-halus",
+   "edges": true,
+   "halftone_area": 0.4
+  },
+  "sha256": "a59316486d4a052ffb1b8f45db359f144305bd5894365461981d856e4c7a7ff5",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   29,
+   0,
+   872,
+   700
+  ]
+ },
+ {
+  "name": "hitam_gradasi50_tepi",
+  "input": "in_art_black.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 35,
+   "edges": true,
+   "halftone_area": 0.5
+  },
+  "sha256": "742cc0410c38d48eedf5688ec4f77eb188bfbda3a7d87ed6d5fda3f9f7fd917a",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   35,
+   0,
+   866,
+   700
+  ]
+ },
+ {
+  "name": "hitam_gradasi50_bintang8",
+  "input": "in_art_black.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 8,
+   "shape": "bintang",
+   "angle": 0,
+   "halftone_area": 0.5
+  },
+  "sha256": "4eaf9ab866b7126716c482667713b8109ff7712040be64ec54951ddac39d060c",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   35,
+   0,
+   866,
+   700
+  ]
+ },
+ {
+  "name": "putih_gradasi70_600dpi",
+  "input": "in_ramp.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 45,
+   "dpi": 600,
+   "halftone_area": 0.7
+  },
+  "sha256": "92d1a94df2b6b7224bb7358b3ea87c01fc17312d5ffef0017443a88417823b7f",
+  "width": 1200,
+  "height": 80,
+  "autotrim": [
+   0,
+   0,
+   1127,
+   80
+  ]
+ },
+ {
+  "name": "hitam_tanpa_halftone",
+  "input": "in_art_black.png",
+  "params": {
+   "shirt": "hitam",
+   "halftone_area": 0.0
+  },
+  "sha256": "8e5606492e121e499459d0393c3f97ecd9e0d8d5b206d86595d40bbd1d4b9667",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   35,
+   0,
+   866,
+   700
+  ]
+ },
+ {
+  "name": "putih_tanpa_halftone_tepi",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "putih",
+   "edges": true,
+   "halftone_area": 0.0
+  },
+  "sha256": "75511905a464d8482a21e6ecc5f436ddbd403f2a409675d13671eb275e2e9671",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "navy_tanpa_halftone_knockout",
+  "input": "in_art_rgba.png",
+  "params": {
+   "shirt": [
+    0.10980392156862745,
+    0.1450980392156863,
+    0.2549019607843137
+   ],
+   "knockout": 0.2,
+   "halftone_area": 0.0
+  },
+  "sha256": "e44efbba6b3ba9a5d5a515b827ad37223d9ff4b48192bcec4a24fb77fde85840",
+  "width": 700,
+  "height": 500,
+  "autotrim": [
+   58,
+   48,
+   671,
+   461
+  ]
+ },
+ {
+  "name": "resize_up_bicubic_hitam",
+  "input": "in_art_rgba.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 35,
+   "grid": "rapi",
+   "resize": [
+    1517,
+    1084
+   ],
+   "resample": "bicubic"
+  },
+  "sha256": "a003281e122147b64e5a0499db5aeaef20d10a97ab530c1c1f5f16c7fb687604",
+  "width": 1517,
+  "height": 1084,
+  "autotrim": [
+   126,
+   104,
+   1393,
+   938
+  ]
+ },
+ {
+  "name": "resize_down_bicubic_putih",
+  "input": "in_art_black.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 45,
+   "resize": [
+    611,
+    475
+   ],
+   "resample": "bicubic"
+  },
+  "sha256": "02365f072f90b1bae7774a5ba990209d70d9a4c91c83aaa63c62a8c2f39f635c",
+  "width": 611,
+  "height": 475,
+  "autotrim": [
+   0,
+   0,
+   611,
+   475
+  ]
+ },
+ {
+  "name": "resize_up_bicubic_mati",
+  "input": "in_art_rgba.png",
+  "params": {
+   "shirt": "hitam",
+   "resize": [
+    1210,
+    864
+   ],
+   "resample": "bicubic",
+   "halftone_area": 0.0
+  },
+  "sha256": "1cd0f2c7555d490246943a92f21168dbf76093668a014ed7afa31f462e625812",
+  "width": 1210,
+  "height": 864,
+  "autotrim": [
+   101,
+   83,
+   1111,
+   748
+  ]
+ },
+ {
+  "name": "hitam_tanpa_halftone_ambang30",
+  "input": "in_art_black.png",
+  "params": {
+   "shirt": "hitam",
+   "halftone_area": 0.0,
+   "shirt_cut": 0.3
+  },
+  "sha256": "eb1d667a272e1dfabc4b644d54274fdb1b130961a107dda26da8a731333ef7c3",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   35,
+   0,
+   866,
+   700
+  ]
+ },
+ {
+  "name": "putih_tanpa_halftone_ambang0",
+  "input": "in_art_white.png",
+  "params": {
+   "shirt": "putih",
+   "halftone_area": 0.0,
+   "shirt_cut": 0.0
+  },
+  "sha256": "8e9dd9cd6d884c76a764a12f1b7061f1818714770f2b7d8e375b8c1a42eb0279",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   29,
+   0,
+   872,
+   700
+  ]
+ },
+ {
+  "name": "hitam_coretan_hapus",
+  "input": "in_art_black.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 35,
+   "grid": "rapi",
+   "erase": [
+    {
+     "mode": "hapus",
+     "r": 18.5,
+     "pts": [
+      [
+       120.25,
+       140.5
+      ],
+      [
+       300.75,
+       180.0
+      ],
+      [
+       420.0,
+       420.5
+      ],
+      [
+       610.5,
+       400.25
+      ]
+     ]
+    },
+    {
+     "mode": "hapus",
+     "r": 40.0,
+     "pts": [
+      [
+       700.5,
+       300.5
+      ]
+     ]
+    },
+    {
+     "mode": "hapus",
+     "r": 25.0,
+     "pts": [
+      [
+       -30.0,
+       650.0
+      ],
+      [
+       120.0,
+       760.0
+      ]
+     ]
+    },
+    {
+     "mode": "kembalikan",
+     "r": 9.0,
+     "pts": [
+      [
+       300.0,
+       120.0
+      ],
+      [
+       300.0,
+       260.0
+      ]
+     ]
+    }
+   ]
+  },
+  "sha256": "953c3270adc65f4e964b5fde60fc09a2381102c443458343aaeb57a213e254f5",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   35,
+   0,
+   866,
+   700
+  ]
+ },
+ {
+  "name": "teal_hapusbg_coretan_kembalikan",
+  "input": "in_art_teal.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 35,
+   "grid": "rapi",
+   "remove_bg": true,
+   "erase": [
+    {
+     "mode": "kembalikan",
+     "r": 30.0,
+     "pts": [
+      [
+       20.0,
+       20.0
+      ],
+      [
+       200.0,
+       60.5
+      ]
+     ]
+    },
+    {
+     "mode": "hapus",
+     "r": 12.25,
+     "pts": [
+      [
+       350.0,
+       100.0
+      ],
+      [
+       350.5,
+       400.0
+      ],
+      [
+       500.0,
+       420.0
+      ]
+     ]
+    },
+    {
+     "mode": "kembalikan",
+     "r": 0.5,
+     "pts": [
+      [
+       600.5,
+       450.5
+      ]
+     ]
+    },
+    {
+     "mode": "hapus",
+     "r": 60.0,
+     "pts": [
+      [
+       690.0,
+       10.0
+      ],
+      [
+       690.0,
+       10.0
+      ]
+     ]
+    }
+   ],
+   "resize": [
+    1050,
+    750
+   ]
+  },
+  "sha256": "2425c2fc3bf1c4d8b0bbd65622151a281448c77928a6e36b11856ba8acbf72fe",
+  "width": 1050,
+  "height": 750,
+  "autotrim": [
+   0,
+   0,
+   963,
+   677
+  ],
+  "bg": [
+   0.16862745583057404,
+   0.47058823704719543,
+   0.501960813999176
+  ]
+ },
+ {
+  "name": "hitam_bayer",
+  "input": "in_art_black.png",
+  "params": {
+   "shirt": "hitam",
+   "pattern": "bayer"
+  },
+  "sha256": "5db72a9d8760b73f6ddae0cb3f3cb6431ee2fe41c34312f244b43c56caa883ca",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   35,
+   0,
+   866,
+   700
+  ]
+ },
+ {
+  "name": "putih_bayer_600dpi",
+  "input": "in_ramp.png",
+  "params": {
+   "shirt": "putih",
+   "pattern": "bayer",
+   "dpi": 600
+  },
+  "sha256": "6a58bd751bfd287aecbe41feace192504e769801ac21271fb47aba25edb5cdad",
+  "width": 1200,
+  "height": 80,
+  "autotrim": [
+   0,
+   0,
+   1127,
+   80
+  ]
+ },
+ {
+  "name": "hitam_difusi",
+  "input": "in_art_black.png",
+  "params": {
+   "shirt": "hitam",
+   "pattern": "difusi"
+  },
+  "sha256": "a393a34454e061f47384e9ebcf628a14f6d93f1abe09b2acdd24d8eda365d7c2",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   35,
+   0,
+   866,
+   700
+  ]
+ },
+ {
+  "name": "putih_difusi_chart",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "putih",
+   "pattern": "difusi"
+  },
+  "sha256": "abeaf70ec429b49aa9405b50ba320a65a59b63acf41e755688e59b16ec325c9f",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "navy_difusi_knockout",
+  "input": "in_art_rgba.png",
+  "params": {
+   "shirt": [
+    0.10980392156862745,
+    0.1450980392156863,
+    0.2549019607843137
+   ],
+   "pattern": "difusi",
+   "knockout": 0.2
+  },
+  "sha256": "d758b09a0e2c7ef19f283af1c7167e6fde520dcb4d185dad95f90c3cf281183f",
+  "width": 700,
+  "height": 500,
+  "autotrim": [
+   58,
+   48,
+   671,
+   461
+  ]
+ },
+ {
+  "name": "putih_difusi_360dpi",
+  "input": "in_ramp.png",
+  "params": {
+   "shirt": "putih",
+   "pattern": "difusi",
+   "dpi": 360
+  },
+  "sha256": "33e2545166eae73db69c715ddd1cb4e8e20b513dbd2c61a53a8409a4d0ce921b",
+  "width": 1200,
+  "height": 80,
+  "autotrim": [
+   0,
+   0,
+   1127,
+   80
+  ]
+ },
+ {
+  "name": "hitam_interlock35",
+  "input": "in_art_black.png",
+  "params": {
+   "shirt": "hitam",
+   "pattern": "interlock",
+   "lpi": 35
+  },
+  "sha256": "b0dcee12a68de9264b977620ae89d1383f86d046f249417c8495a8915f84f534",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   35,
+   0,
+   866,
+   700
+  ]
+ },
+ {
+  "name": "putih_interlock_chart",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "putih",
+   "pattern": "interlock",
+   "lpi": 30
+  },
+  "sha256": "1755057d4309d30003bd1a3eaba694694e0b787d969f6d21eb05d329d7fd463f",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "putih_interlock_sudut15_kasar",
+  "input": "in_ramp.png",
+  "params": {
+   "shirt": "putih",
+   "pattern": "interlock",
+   "lpi": 20,
+   "angle": 15,
+   "shape": "kasar"
+  },
+  "sha256": "29372d5d8aac83aafc7668712c1dcf611a4853b9afc62a58376f89d805d12ec3",
+  "width": 1200,
+  "height": 80,
+  "autotrim": [
+   0,
+   0,
+   1127,
+   80
+  ]
+ },
+ {
+  "name": "navy_interlock",
+  "input": "in_art_rgba.png",
+  "params": {
+   "shirt": [
+    0.10980392156862745,
+    0.1450980392156863,
+    0.2549019607843137
+   ],
+   "pattern": "interlock",
+   "lpi": 35
+  },
+  "sha256": "842efb9469c20192342c92d6b1e3b06365f8926608366759a163d86244619bbc",
+  "width": 700,
+  "height": 500,
+  "autotrim": [
+   58,
+   48,
+   671,
+   461
+  ]
+ },
+ {
+  "name": "hitam_gradasi_difusi",
+  "input": "in_art_black.png",
+  "params": {
+   "shirt": "hitam",
+   "pattern": "difusi",
+   "halftone_area": 0.5
+  },
+  "sha256": "f9c68955453f88e1accbe4530db7d5864c8c54bb3fb361bbec652a22f0a60f0b",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   35,
+   0,
+   866,
+   700
+  ]
+ },
+ {
+  "name": "hitam_gradasi_interlock",
+  "input": "in_art_black.png",
+  "params": {
+   "shirt": "hitam",
+   "pattern": "interlock",
+   "halftone_area": 0.5
+  },
+  "sha256": "a59370e8f93c8cccc8b76e39e49f9168e630bc2093c1377b764eb249f5947a6c",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   35,
+   0,
+   866,
+   700
+  ]
+ },
+ {
+  "name": "putih_gradasi_bayer",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "putih",
+   "pattern": "bayer",
+   "halftone_area": 0.4
+  },
+  "sha256": "bab92dbb3a0e87eb7a17b175a2c39cddd48e650f0c3c61d8ffa346662ad6aac4",
+  "width": 1180,
+  "height": 708,
+  "autotrim": [
+   0,
+   0,
+   1180,
+   708
+  ]
+ },
+ {
+  "name": "hitam_putar90",
+  "input": "in_art_black.png",
+  "params": {
+   "shirt": "hitam",
+   "lpi": 35,
+   "grid": "rapi",
+   "rotate": 90
+  },
+  "sha256": "1374cf9022408048817d10a80ab85bcf8aa6bdfda0e460ced9a700fbe10bc586",
+  "width": 700,
+  "height": 900,
+  "autotrim": [
+   0,
+   35,
+   700,
+   866
+  ]
+ },
+ {
+  "name": "putih_putar270_cermin",
+  "input": "in_chart.png",
+  "params": {
+   "shirt": "putih",
+   "lpi": 30,
+   "rotate": 270,
+   "mirror": true
+  },
+  "sha256": "1baaa6f5829c074712dd76b74e748cf5c24a8cef5933a99cfffbe4a3471c35dc",
+  "width": 708,
+  "height": 1180,
+  "autotrim": [
+   0,
+   0,
+   708,
+   1180
+  ]
+ },
+ {
+  "name": "navy_putar180_resize",
+  "input": "in_art_rgba.png",
+  "params": {
+   "shirt": [
+    0.10980392156862745,
+    0.1450980392156863,
+    0.2549019607843137
+   ],
+   "lpi": 35,
+   "rotate": 180,
+   "resize": [
+    910,
+    650
+   ]
+  },
+  "sha256": "ae93ff5d0143079a056c742f7035b4a549f67d9a65c0418be94be89777662916",
+  "width": 910,
+  "height": 650,
+  "autotrim": [
+   38,
+   51,
+   834,
+   587
+  ]
+ },
+ {
+  "name": "hitam_cermin_gradasi",
+  "input": "in_art_black.png",
+  "params": {
+   "shirt": "hitam",
+   "mirror": true,
+   "halftone_area": 0.5
+  },
+  "sha256": "69ee64d7997a0035326257d87da302526373801f36a80bbae66ca33241c2ecb9",
+  "width": 900,
+  "height": 700,
+  "autotrim": [
+   34,
+   0,
+   865,
+   700
+  ]
+ }
+]
