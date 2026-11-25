@@ -34,14 +34,17 @@ struct Args {
     /// colour-halftone band shirts). Use one angle (e.g. --sudut 22.5) and a low LPI
     #[arg(long)]
     titik_warna: bool,
-    /// with --titik-warna: dot size where the design is fully there, 1-100 % (smaller only
-    /// where it fades into the shirt, always in the design colour)
-    #[arg(long, default_value_t = 85.0)]
+    /// with --titik-warna: largest dot size, 1-100 % (100 = colours do not fade)
+    #[arg(long, default_value_t = 100.0)]
     ukuran_titik: f32,
     /// with --titik-warna: colours at least this light (luminance, % away from the shirt
     /// colour: white, pale highlights) print solid; 100 = never solid
     #[arg(long, default_value_t = 92.0)]
     padat_mulai: f32,
+    /// with --titik-warna: colour lift 0-100 %: dots in the colour at full strength
+    /// (hue / saturation kept), smaller by the same factor; 0 = the design colour as is
+    #[arg(long, default_value_t = 100.0)]
+    naik_warna: f32,
     /// no halftone at all: true colours, soft edges flattened onto the shirt colour,
     /// specks < 0.15 mm cleaned (combine with --tekstur for a texture-only vintage look)
     #[arg(long = "tanpa-halftone")]
@@ -264,6 +267,9 @@ fn main() -> Result<()> {
     if !(a.ukuran_titik.is_finite() && (1.0..=100.0).contains(&a.ukuran_titik)) || !(a.padat_mulai.is_finite() && (1.0..=100.0).contains(&a.padat_mulai)) {
         bail!("--ukuran-titik and --padat-mulai must be 1-100 (%)");
     }
+    if !(a.naik_warna.is_finite() && (0.0..=100.0).contains(&a.naik_warna)) {
+        bail!("--naik-warna must be 0-100 (%)");
+    }
     if a.sudut.is_some_and(|d| !d.is_finite()) {
         bail!("--sudut must be a number of degrees");
     }
@@ -307,7 +313,7 @@ fn main() -> Result<()> {
             .iter()
             .map(|t| parse_layer(t))
             .collect::<Result<Vec<_>>>()?,
-        true_dots: a.titik_warna.then(|| studiozea_engine::TrueDots { size: a.ukuran_titik / 100.0, solid: a.padat_mulai / 100.0 }),
+        true_dots: a.titik_warna.then(|| studiozea_engine::TrueDots { size: a.ukuran_titik / 100.0, solid: a.padat_mulai / 100.0, lift: a.naik_warna / 100.0 }),
         protect_text: a.lindungi_teks,
         text_style: if a.teks_halus { studiozea_engine::TextStyle::Halus } else { studiozea_engine::TextStyle::Padat },
         ..Settings::default()

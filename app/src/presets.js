@@ -73,7 +73,7 @@ export const PRESETS = [
   { id: 'segitiga', name: 'Retro: segitiga (10 LPI)', en: 'Retro: triangles (10 LPI)', set: { pattern: 'am', lpi: 10, shape: 'segitiga', grid: 'auto', edges: false, angle: 0, rosette: null, halftoneOn: true } },
   { id: 'interlock', name: 'Interlock rapi (35 LPI, 45°)', en: 'Clean interlock (35 LPI, 45°)', set: { pattern: 'interlock', lpi: 35, angle: null, edges: false, halftoneOn: true } },
   { id: 'difusi', name: 'Dither difusi (detail halus)', en: 'Diffusion dither (fine detail)', set: { pattern: 'difusi', edges: false, halftoneOn: true } },
-  { id: 'bandtee', name: 'Band tee: titik warna asli (12 LPI)', en: 'Band tee: true-colour dots (12 LPI)', set: { pattern: 'am', lpi: 12, shape: 'bulat-murni', grid: 'auto', edges: false, angle: 22.5, rosette: null, halftoneOn: true, fades: false, trueDots: true, dotSize: 72, solidFrom: 92 } },
+  { id: 'bandtee', name: 'Band tee: titik warna asli (12 LPI)', en: 'Band tee: true-colour dots (12 LPI)', set: { pattern: 'am', lpi: 12, shape: 'bulat-murni', grid: 'auto', edges: false, angle: 22.5, rosette: null, halftoneOn: true, fades: false, trueDots: true, dotSize: 100, solidFrom: 92, liftColour: 100 } },
   { id: 'garis', name: 'Retro: garis (15 LPI, 45°)', en: 'Retro: lines (15 LPI, 45°)', set: { pattern: 'am', lpi: 15, shape: 'garis', grid: 'auto', edges: false, angle: 45, rosette: null, halftoneOn: true } },
 ].map((p) => ({ ...p, set: { trueDots: false, ...p.set } }))
 
@@ -106,8 +106,9 @@ export const DEFAULTS = {
   fades: false, // halftone only on fades (true colours elsewhere)
   fadesArea: 50, // % : below this distance from the shirt colour the design becomes dots
   trueDots: false, // "titik warna asli": one screen over everything, dots in the design's own colours
-  dotSize: 85, // % : true-colour dots: dot size where the design is fully there (smaller only where it fades into the shirt)
+  dotSize: 100, // % : true-colour dots: dot size where the design is fully there (smaller only where it fades into the shirt)
   solidFrom: 92, // % : true-colour dots: colours at least this light print solid (100 = never)
+  liftColour: 100, // % : true-colour dots: colour lift (dots at full strength, smaller; 0 = design colour as is)
   k: 'off',
   edges: false,
   distress: [],
@@ -195,7 +196,7 @@ export function toJob(s) {
       shirt_cut: (Number.isFinite(Number(s.shirtCut)) ? Math.min(100, Math.max(0, Number(s.shirtCut))) : 12) / 100,
       halftone_area: s.halftoneOn === false ? 0 : s.fades && !s.trueDots ? Math.min(100, Math.max(1, Number(s.fadesArea) || 50)) / 100 : null,
       true_dots: s.halftoneOn !== false && s.trueDots
-        ? { size: Math.min(100, Math.max(1, Number(s.dotSize) || 85)) / 100, solid: Math.min(100, Math.max(1, Number(s.solidFrom) || 92)) / 100 }
+        ? { size: Math.min(100, Math.max(1, Number(s.dotSize) || 100)) / 100, solid: Math.min(100, Math.max(1, Number(s.solidFrom) || 92)) / 100, lift: (Number.isFinite(Number(s.liftColour)) ? Math.min(100, Math.max(0, Number(s.liftColour))) : 100) / 100 }
         : null,
       protect_text: !!s.protectText && s.halftoneOn !== false,
       text_style: s.textStyle === 'halus' ? 'halus' : 'padat',

@@ -1400,7 +1400,11 @@ export default function App() {
           </Row>
           {s.trueDots && (
             <>
-              <Row label={L('Ukuran titik', 'Dot size')} hint={L('Besar titik (%) di bagian desain yang penuh. Titik hanya mengecil di bagian yang memudar ke warna kaos, warnanya tetap warna desain, jadi warna tidak turun. Makin besar = makin mirip warna asli; sekitar 78 % titik mulai bersentuhan.', 'Dot size (%) where the design is fully there. Dots only get smaller where the design fades into the shirt, keeping the design colour, so colours do not fade. Bigger = closer to the original colours; at about 78 % the dots start to touch.')}>
+              <Row label={L('Naik warna', 'Colour lift')} hint={L('Warna tiap titik dinaikkan ke kecerahan penuh (warna dan kepekatan tetap), titiknya dikecilkan sebanding: dari jauh warnanya sama, dari dekat titiknya cerah. 100 % = seperti kaos band halftone (paling cerah, cocok untuk desain warna rata di kaos hitam). Untuk lukisan / foto atau kaos berwarna coba sekitar 30 %. 0 = warna desain apa adanya.', 'Each dot colour is raised to full brightness (hue and saturation kept) and the dot made smaller to match: the same colour from a distance, bright dots up close. 100 % = like halftone band shirts (brightest, best for flat-colour art on black). For paintings / photos or coloured shirts try about 30 %. 0 = the design colour as it is.')}>
+                <Slider min={0} max={100} step={1} value={s.liftColour} onCommit={(v) => set({ liftColour: v })} />
+                <NumField className="short" value={s.liftColour} min={0} max={100} step={1} onCommit={(v) => set({ liftColour: v })} />
+              </Row>
+              <Row label={L('Ukuran titik', 'Dot size')} hint={L('Besar titik maksimum (%). 100 = warna tidak turun (dari jauh sama dengan desain). Lebih kecil = lebih banyak kaos terlihat di sela titik, warna jadi lebih gelap / pudar.', 'Largest dot size (%). 100 = colours do not fade (the same as the design from a distance). Smaller = more shirt between the dots, colours look darker / duller.')}>
                 <Slider min={20} max={100} step={1} value={s.dotSize} onCommit={(v) => set({ dotSize: v })} />
                 <NumField className="short" value={s.dotSize} min={1} max={100} step={1} onCommit={(v) => set({ dotSize: v })} />
               </Row>

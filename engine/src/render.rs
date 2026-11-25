@@ -114,11 +114,17 @@ pub struct TrueDots {
     /// colours whose luminance is at least this far from the shirt colour (0..1: white,
     /// pale highlights on a black shirt) print solid; 1 = never solid
     pub solid: f32,
+    /// "naik warna" (colour lift), 0..1: every dot colour is pushed to full strength away
+    /// from black (dark shirts) or white (light shirts), hue and saturation kept, and its
+    /// dot shrinks by the same
+    /// factor, so seen from a distance the colour stays the original while each dot is
+    /// vivid (dark red -> smaller dots of bright red). 0 = the design colour as it is
+    pub lift: f32,
 }
 
 impl Default for TrueDots {
     fn default() -> Self {
-        TrueDots { size: 0.85, solid: 0.92 }
+        TrueDots { size: 1.0, solid: 0.92, lift: 1.0 }
     }
 }
 
@@ -175,8 +181,8 @@ impl Settings {
             return None;
         }
         self.true_dots
-            .filter(|t| t.size.is_finite() && t.solid.is_finite())
-            .map(|t| TrueDots { size: t.size.clamp(0.0, 1.0), solid: t.solid.clamp(0.01, 1.0) })
+            .filter(|t| t.size.is_finite() && t.solid.is_finite() && t.lift.is_finite())
+            .map(|t| TrueDots { size: t.size.clamp(0.0, 1.0), solid: t.solid.clamp(0.01, 1.0), lift: t.lift.clamp(0.0, 1.0) })
     }
 
     /// "Lindungi teks" with fine dots: the LPI the lettering is screened at (twice the
@@ -443,8 +449,10 @@ fn render_true_dots(c: &[f32], a: &[f32], w: usize, h: usize, ox: usize, oy: usi
     let lum = |v: [f32; 3]| 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
     let lsh = lum(sh);
     let lrange = lsh.max(1.0 - lsh).max(1e-6);
+    let anchor = if lsh < 0.5 { 0.0f32 } else { 1.0 };
     let mut cov = vec![0f32; n];
-    cov.par_iter_mut().enumerate().for_each(|(p, cv)| {
+    let mut dot_rgb = vec![0f32; n * 3];
+    cov.par_iter_mut().zip(dot_rgb.par_chunks_mut(3)).enumerate().for_each(|(p, (cv, col))| {
         let mut al = a[p];
         if coloured && s.knockout > 0.0 {
             let dr = c[p * 3] - sh[0];
@@ -466,19 +474,32 @@ fn render_true_dots(c: &[f32], a: &[f32], w: usize, h: usize, ox: usize, oy: usi
         // there (alpha, i.e. fades into the shirt) and only ramps down for colours
         // within ~15 % of the shirt colour (deep shadows, JPEG noise of a background)
         let there = al * ((dist - s.clip) / 0.15).clamp(0.0, 1.0);
+        // colour lift: the design colour pushed to full strength away from black (dark
+        // shirts) or white (light shirts), so hue and saturation stay; the dot smaller
+        // by the same factor k (on a black / white shirt the average is unchanged).
+        // A neutral anchor, not the shirt colour: pushing away from e.g. navy would
+        // tint greys yellow
+        let mut own = 0f32;
+        for ch in 0..3 {
+            own = own.max((c[p * 3 + ch] - anchor).abs());
+        }
+        let k = if own > 1e-4 { 1.0 + td.lift * (own.min(1.0) - 1.0) } else { 1.0 };
+        for ch in 0..3 {
+            col[ch] = (anchor + (c[p * 3 + ch] - anchor) / k).clamp(0.0, 1.0);
+        }
         *cv = if dist < s.clip {
             0.0
         } else if td.solid < 1.0 && light >= td.solid {
             1.0
         } else {
-            (td.size * there).min(1.0)
+            (td.size * there * k).min(1.0)
         };
     });
     let b = screen_cov(&cov, w, h, ox, oy, s);
     o.par_chunks_mut(4).enumerate().for_each(|(p, px)| {
         if b[p] && cov[p] > 0.0 {
             for ch in 0..3 {
-                px[ch] = (c[p * 3 + ch].clamp(0.0, 1.0) * 255.0).round_ties_even() as u8;
+                px[ch] = (dot_rgb[p * 3 + ch] * 255.0).round_ties_even() as u8;
             }
             px[3] = 255;
         }
