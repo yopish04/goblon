@@ -1400,7 +1400,7 @@ export default function App() {
           </Row>
           {s.trueDots && (
             <>
-              <Row label={L('Ukuran titik', 'Dot size')} hint={L('Besar titik untuk warna penuh (%). Bayangan yang lebih gelap otomatis lebih kecil. Sekitar 72 % = titik hampir bersentuhan.', 'Dot size for a full-strength colour (%). Darker shades get smaller dots automatically. About 72 % = dots almost touching.')}>
+              <Row label={L('Ukuran titik', 'Dot size')} hint={L('Besar titik (%) di bagian desain yang penuh. Titik hanya mengecil di bagian yang memudar ke warna kaos, warnanya tetap warna desain, jadi warna tidak turun. Makin besar = makin mirip warna asli; sekitar 78 % titik mulai bersentuhan.', 'Dot size (%) where the design is fully there. Dots only get smaller where the design fades into the shirt, keeping the design colour, so colours do not fade. Bigger = closer to the original colours; at about 78 % the dots start to touch.')}>
                 <Slider min={20} max={100} step={1} value={s.dotSize} onCommit={(v) => set({ dotSize: v })} />
                 <NumField className="short" value={s.dotSize} min={1} max={100} step={1} onCommit={(v) => set({ dotSize: v })} />
               </Row>

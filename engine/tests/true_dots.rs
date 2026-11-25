@@ -52,9 +52,9 @@ fn dots_keep_the_design_colour_and_white_is_solid() {
             assert_eq!(px, want, "dot at {x},{y} keeps the design colour");
         }
     }
-    // the blue: dots of about the chosen size (72 %, calibrated), not solid, not empty
+    // the blue: dots of about the chosen size (85 %, calibrated), not solid, not empty
     let blue = coverage(&o, w, 10, w / 2 - 10, 10, h * 3 / 4 - 10);
-    assert!((0.55..0.9).contains(&blue), "blue coverage {blue}");
+    assert!((0.7..0.97).contains(&blue), "blue coverage {blue}");
     // white: lighter than "solid from" -> solid
     let white = coverage(&o, w, w / 2 + 10, w - 10, 10, h * 3 / 4 - 10);
     assert!(white > 0.99, "white coverage {white}");
@@ -90,4 +90,41 @@ fn settings_without_the_field_still_load() {
     assert!(s.true_dots.is_none());
     let s: Settings = serde_json::from_str(r#"{"true_dots": {"size": 0.6}}"#).unwrap();
     assert_eq!(s.true_dots, Some(TrueDots { size: 0.6, solid: 0.92 }));
+}
+
+/// regression: a full-colour painting on a navy shirt faded because muted / mid colours
+/// (grey stone, skin, dark purple) got small dots. The dot carries the colour, so only
+/// fades into the shirt (alpha) and colours right next to the shirt colour get smaller
+#[test]
+fn muted_colours_on_a_coloured_shirt_keep_full_dots() {
+    let navy = [16.0 / 255.0, 24.0 / 255.0, 60.0 / 255.0];
+    let (w, h) = (240, 200);
+    let grey = [0.42, 0.44, 0.46];
+    let mut c = vec![0f32; w * h * 3];
+    let mut a = vec![1f32; w * h];
+    for p in 0..w * h {
+        let (x, y) = (p % w, p / w);
+        c[p * 3..p * 3 + 3].copy_from_slice(&grey);
+        if y >= h / 2 {
+            a[p] = x as f32 / w as f32; // the grey fades into the shirt from left to right
+        }
+    }
+    let s = Settings { shirt: Shirt::Warna(navy), ..settings(Some(TrueDots::default())) };
+    let o = render(&c, &a, w, h, &s);
+    let full = coverage(&o, w, 10, w - 10, 10, h / 2 - 10);
+    let plain = render(&c, &a, w, h, &Settings { shirt: Shirt::Warna(navy), ..settings(Some(TrueDots::default())) });
+    assert_eq!(o, plain);
+    assert!(full > 0.7, "grey on navy: coverage {full} (would fade the print)");
+    // the fade: smaller dots towards the shirt, but still the grey itself, never darker
+    let weak = coverage(&o, w, 30, 90, h / 2 + 10, h - 10);
+    let strong = coverage(&o, w, 160, 230, h / 2 + 10, h - 10);
+    assert!(weak < strong, "fade {weak} < {strong}");
+    let want = grey.map(|v| (v * 255.0f32).round() as u8);
+    for p in 0..w * h {
+        if o[p * 4 + 3] == 255 {
+            assert_eq!(&o[p * 4..p * 4 + 3], &want, "dot colour at {},{}", p % w, p / w);
+        } else {
+            assert_eq!(o[p * 4 + 3], 0, "no semi-transparency");
+        }
+    }
 }

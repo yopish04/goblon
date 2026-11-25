@@ -34,8 +34,9 @@ struct Args {
     /// colour-halftone band shirts). Use one angle (e.g. --sudut 22.5) and a low LPI
     #[arg(long)]
     titik_warna: bool,
-    /// with --titik-warna: dot size of a full-strength colour (darker shades smaller), 1-100 %
-    #[arg(long, default_value_t = 72.0)]
+    /// with --titik-warna: dot size where the design is fully there, 1-100 % (smaller only
+    /// where it fades into the shirt, always in the design colour)
+    #[arg(long, default_value_t = 85.0)]
     ukuran_titik: f32,
     /// with --titik-warna: colours at least this light (luminance, % away from the shirt
     /// colour: white, pale highlights) print solid; 100 = never solid

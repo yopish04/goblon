@@ -108,7 +108,8 @@ pub struct Settings {
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct TrueDots {
-    /// dot size of a full-strength colour, 0..1 (darker shades get smaller dots)
+    /// dot size where the design is fully there, 0..1 (smaller only where it fades into
+    /// the shirt colour; the dot keeps the design colour)
     pub size: f32,
     /// colours whose luminance is at least this far from the shirt colour (0..1: white,
     /// pale highlights on a black shirt) print solid; 1 = never solid
@@ -117,7 +118,7 @@ pub struct TrueDots {
 
 impl Default for TrueDots {
     fn default() -> Self {
-        TrueDots { size: 0.72, solid: 0.92 }
+        TrueDots { size: 0.85, solid: 0.92 }
     }
 }
 
@@ -422,13 +423,14 @@ fn screen_cov(cov: &[f32], w: usize, h: usize, ox: usize, oy: usize, s: &Setting
 }
 
 /// "titik warna asli" (true-colour dots, the look of screen-printed band shirts made in
-/// one colour-halftone pass): ONE screen over the whole design; a dot prints in the
-/// design's own colour at that pixel (never split into pure inks, never brightened).
-/// Dot size follows the colour's strongest channel distance from the shirt colour (a
-/// full-strength colour gets `size`, darker shades smaller dots); colours whose
-/// luminance is at least `solid` away from the shirt (white, pale highlights) print
-/// solid. Every value depends only
-/// on the pixel and the absolute screen position, so bands equal the full render.
+/// one colour-halftone pass): ONE screen over the whole design, every dot printed in the
+/// design's own colour (never split into pure inks, never semi-transparent). Where the
+/// design is fully there the dot has exactly the original pixel colour and `size`;
+/// where it fades into the shirt (alpha from the background removal) the dot keeps the
+/// design colour and gets smaller, so seen from a distance the print keeps the colours
+/// of the original instead of fading (no darker / greyer dots). Colours whose luminance
+/// is at least `solid` away from the shirt print solid. Every value depends only on the
+/// pixel and the absolute screen position, so bands equal the full render.
 #[allow(clippy::too_many_arguments)]
 fn render_true_dots(c: &[f32], a: &[f32], w: usize, h: usize, ox: usize, oy: usize, s: &Settings, td: TrueDots, o: &mut [u8]) {
     let n = w * h;
@@ -459,12 +461,17 @@ fn render_true_dots(c: &[f32], a: &[f32], w: usize, h: usize, ox: usize, oy: usi
             dist = dist.max((v - sh[ch]).abs() / sh[ch].max(1.0 - sh[ch]));
         }
         let light = ((lum(seen) - lsh).abs() / lrange).min(1.0);
+        // the dot carries the colour, so its size does not shrink for dark or muted
+        // colours (that faded whole paintings): it follows how much of the design is
+        // there (alpha, i.e. fades into the shirt) and only ramps down for colours
+        // within ~15 % of the shirt colour (deep shadows, JPEG noise of a background)
+        let there = al * ((dist - s.clip) / 0.15).clamp(0.0, 1.0);
         *cv = if dist < s.clip {
             0.0
         } else if td.solid < 1.0 && light >= td.solid {
             1.0
         } else {
-            (td.size * dist).min(1.0)
+            (td.size * there).min(1.0)
         };
     });
     let b = screen_cov(&cov, w, h, ox, oy, s);

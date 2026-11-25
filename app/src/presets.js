@@ -104,7 +104,7 @@ export const DEFAULTS = {
   fades: false, // halftone only on fades (true colours elsewhere)
   fadesArea: 50, // % : below this distance from the shirt colour the design becomes dots
   trueDots: false, // "titik warna asli": one screen over everything, dots in the design's own colours
-  dotSize: 72, // % : true-colour dots: dot size of a full-strength colour
+  dotSize: 85, // % : true-colour dots: dot size where the design is fully there (smaller only where it fades into the shirt)
   solidFrom: 92, // % : true-colour dots: colours at least this light print solid (100 = never)
   k: 'off',
   edges: false,
@@ -193,7 +193,7 @@ export function toJob(s) {
       shirt_cut: (Number.isFinite(Number(s.shirtCut)) ? Math.min(100, Math.max(0, Number(s.shirtCut))) : 12) / 100,
       halftone_area: s.halftoneOn === false ? 0 : s.fades && !s.trueDots ? Math.min(100, Math.max(1, Number(s.fadesArea) || 50)) / 100 : null,
       true_dots: s.halftoneOn !== false && s.trueDots
-        ? { size: Math.min(100, Math.max(1, Number(s.dotSize) || 72)) / 100, solid: Math.min(100, Math.max(1, Number(s.solidFrom) || 92)) / 100 }
+        ? { size: Math.min(100, Math.max(1, Number(s.dotSize) || 85)) / 100, solid: Math.min(100, Math.max(1, Number(s.solidFrom) || 92)) / 100 }
         : null,
       protect_text: !!s.protectText && s.halftoneOn !== false,
       text_style: s.textStyle === 'halus' ? 'halus' : 'padat',
