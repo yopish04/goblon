@@ -1372,7 +1372,8 @@ export default function App() {
                 <Slider min={0} max={359} step={1} value={s.angle ?? autoAngle} onCommit={(v) => set({ angle: v })} />
                 <NumField className="short" value={s.angle ?? autoAngle} min={0} max={359.9} step={0.5} onCommit={(v) => set({ angle: v })} />
               </Row>
-              {s.shirtType !== 'hitam' && s.pattern === 'am' && (
+              {/* rosette needs a screen per ink: the true-colour looks (fades only, true-colour dots) use one screen */}
+              {s.shirtType !== 'hitam' && s.pattern === 'am' && !s.fades && !s.trueDots && (
                 <Row label={L('Warna', 'Colours')} hint={L(`Rosette: C/Y ${fmt(s.angle ?? 22.5)}°, M ${fmt(((s.angle ?? 22.5) + 45) % 360)}° (seperti referensi). Satu sudut: semua warna di sudut yang sama (titik di atas titik). Auto: rosette di bawah 55 LPI.`, `Rosette: C/Y ${fmt(s.angle ?? 22.5)}°, M ${fmt(((s.angle ?? 22.5) + 45) % 360)}° (classic). One angle: all colours at the same angle (dot on dot). Auto: rosette below 55 LPI.`)}>
                   <Seg value={s.rosette == null ? 'auto' : s.rosette ? 'ya' : 'tidak'}
                     options={[['auto', 'Auto'], ['ya', 'Rosette'], ['tidak', L('Satu sudut', 'One angle')]]}
