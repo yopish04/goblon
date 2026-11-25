@@ -1391,18 +1391,32 @@ export default function App() {
               )}
             </>
           )}
-          <Row label="Area" hint={s.fades
+          <Row label="Area" hint={s.trueDots
+            ? L('Titik warna asli: seluruh desain jadi titik dengan satu raster (satu sudut), tiap titik memakai warna asli desain (tidak dipecah jadi tinta murni), bagian sangat terang tetap solid. Seperti kaos band halftone warna. Paling pas dengan bentuk Bulat murni dan LPI rendah (10-15).', 'True-colour dots: the whole design becomes dots of one screen (one angle), every dot keeps the design\'s own colour (not split into pure inks), very light parts stay solid. Like colour-halftone band shirts. Best with the Pure round shape and a low LPI (10-15).')
+            : s.fades
             ? L('Gradasi saja: warna blok tetap solid (warna asli), titik hanya di bagian yang memudar ke warna kaos (glow, bayangan, asap, pinggiran). Geser ke kanan = area titik makin luas.', 'Fades only: solid areas keep their true colours, dots only where the design fades into the shirt (glow, shadow, smoke, edges). Slide right = more dots.')
             : L('Semua: seluruh warna dipecah jadi titik warna murni (seperti referensi).', 'All: every colour becomes dots of pure colour (classic).')}>
-            <Seg value={s.fades ? 'gradasi' : 'semua'} options={[['semua', L('Semua', 'All')], ['gradasi', L('Gradasi saja', 'Fades only')]]} onChange={(v) => set({ fades: v === 'gradasi' })} />
+            <Seg value={s.trueDots ? 'warna' : s.fades ? 'gradasi' : 'semua'} options={[['semua', L('Semua', 'All')], ['gradasi', L('Gradasi saja', 'Fades only')], ['warna', L('Titik warna asli', 'True-colour dots')]]} onChange={(v) => set({ fades: v === 'gradasi', trueDots: v === 'warna' })} />
           </Row>
-          {s.fades && (
+          {s.trueDots && (
+            <>
+              <Row label={L('Ukuran titik', 'Dot size')} hint={L('Besar titik untuk warna penuh (%). Bayangan yang lebih gelap otomatis lebih kecil. Sekitar 72 % = titik hampir bersentuhan.', 'Dot size for a full-strength colour (%). Darker shades get smaller dots automatically. About 72 % = dots almost touching.')}>
+                <Slider min={20} max={100} step={1} value={s.dotSize} onCommit={(v) => set({ dotSize: v })} />
+                <NumField className="short" value={s.dotSize} min={1} max={100} step={1} onCommit={(v) => set({ dotSize: v })} />
+              </Row>
+              <Row label={L('Padat mulai', 'Solid from')} hint={L('Warna seterang ini atau lebih (%) dicetak solid tanpa titik: putih dan sorotan terang. Turunkan (mis. 75) supaya kuning juga solid; 100 = tidak ada yang solid.', 'Colours this light or lighter (%) print solid, without dots: white and bright highlights. Lower it (e.g. 75) to make yellow solid too; 100 = nothing solid.')}>
+                <Slider min={50} max={100} step={1} value={s.solidFrom} onCommit={(v) => set({ solidFrom: v })} />
+                <NumField className="short" value={s.solidFrom} min={1} max={100} step={1} onCommit={(v) => set({ solidFrom: v })} />
+              </Row>
+            </>
+          )}
+          {s.fades && !s.trueDots && (
             <Row label="">
               <Slider min={5} max={100} step={1} value={s.fadesArea} onCommit={(v) => set({ fadesArea: v })} />
               <NumField className="short" value={s.fadesArea} min={1} max={100} step={1} onCommit={(v) => set({ fadesArea: v })} />
             </Row>
           )}
-          {s.shirtType !== 'hitam' && !s.fades && (
+          {s.shirtType !== 'hitam' && !s.fades && !s.trueDots && (
             <Row label={L('Hitam (K)', 'Black (K)')} hint={L('GCR: abu-abu/bayangan jadi titik hitam bersih. Garis saja: hanya garis hitam pekat.', 'GCR: greys/shadows become clean black dots. Lines: only solid black lines.')}>
               <Seg value={s.k} onChange={(v) => set({ k: v })} options={[['off', L('Mati', 'Off')], ['garis', L('Garis', 'Lines')], ['gcr', 'GCR']]} />
             </Row>

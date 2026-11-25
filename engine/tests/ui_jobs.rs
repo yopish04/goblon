@@ -9,7 +9,7 @@ fn ui_jobs_deserialize_and_render() {
     let raw = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/ui_jobs.json"))
         .unwrap();
     let jobs: Vec<Job> = serde_json::from_str(&raw).expect("UI job JSON must match the engine");
-    assert_eq!(jobs.len(), 45);
+    assert_eq!(jobs.len(), 47);
     let src = studiozea_engine::io::load(std::path::Path::new(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests/golden/in_art_rgba.png"

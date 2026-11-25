@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use serde_json::Value;
 use studiozea_engine::{
     band::{render_packed, Plan, Resizer},
-    bg, distress, io, noise::Grain, render, resize, GridChoice, KMode, Pattern, Prepared, Settings, Shape, Shirt,
+    bg, distress, io, noise::Grain, render, resize, GridChoice, KMode, Pattern, Prepared, Settings, TrueDots, Shape, Shirt,
 };
 
 fn settings(p: &Value) -> Settings {
@@ -139,7 +139,12 @@ fn bands_and_windows_match_full_render() {
         let plain = settings(p);
         let mut textured = plain.clone();
         textured.distress = texture_stack(ci as u32);
-        for (s, tag) in [(plain, ""), (textured, " +tekstur")] {
+        // true-colour dots (Settings::true_dots) on a few cases: one screen, own colours
+        let mut variants = vec![(plain.clone(), ""), (textured, " +tekstur")];
+        if ci < 4 && plain.halftone_area != Some(0.0) {
+            variants.push((Settings { true_dots: Some(TrueDots::default()), halftone_area: None, ..plain }, " +titik-warna"));
+        }
+        for (s, tag) in variants {
             let name = format!("{name}{tag}");
             let full = render(&fc, &fa, ow, oh, &s);
             let plan = Plan::new(

@@ -97,6 +97,28 @@ pub struct Settings {
     /// vintage texture layers (empty = no texture, render unchanged)
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub distress: Vec<distress::Layer>,
+    /// "titik warna asli" (true-colour dots): the whole design through ONE screen, every
+    /// dot in the design's own colour (no split into pure inks), very light parts solid.
+    /// None = off (render unchanged). Ignored when `halftone_area` is Some(0) (no halftone)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub true_dots: Option<TrueDots>,
+}
+
+/// settings of the true-colour dots look (`Settings::true_dots`)
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct TrueDots {
+    /// dot size of a full-strength colour, 0..1 (darker shades get smaller dots)
+    pub size: f32,
+    /// colours whose luminance is at least this far from the shirt colour (0..1: white,
+    /// pale highlights on a black shirt) print solid; 1 = never solid
+    pub solid: f32,
+}
+
+impl Default for TrueDots {
+    fn default() -> Self {
+        TrueDots { size: 0.72, solid: 0.92 }
+    }
 }
 
 impl Default for Settings {
@@ -124,6 +146,7 @@ impl Default for Settings {
             protect_text: false,
             text_style: TextStyle::Padat,
             distress: Vec::new(),
+            true_dots: None,
         }
     }
 }
@@ -142,7 +165,17 @@ impl Settings {
 
     /// output limited to the 8 pure colours (false: true colours, see `halftone_area`)
     pub fn pure_colours(&self) -> bool {
-        self.fades_area().is_none() && !(self.protect_text && self.text_fine_lpi().is_none())
+        self.fades_area().is_none() && self.true_dots().is_none() && !(self.protect_text && self.text_fine_lpi().is_none())
+    }
+
+    /// the valid true-colour dots settings, if that look is on (never with halftone off)
+    pub fn true_dots(&self) -> Option<TrueDots> {
+        if self.fades_area() == Some(0.0) {
+            return None;
+        }
+        self.true_dots
+            .filter(|t| t.size.is_finite() && t.solid.is_finite())
+            .map(|t| TrueDots { size: t.size.clamp(0.0, 1.0), solid: t.solid.clamp(0.01, 1.0) })
     }
 
     /// "Lindungi teks" with fine dots: the LPI the lettering is screened at (twice the
@@ -323,7 +356,9 @@ pub fn render_at_masked(
         None => a,
     };
     let screen = |s: &Settings, o: &mut [u8]| {
-        if let Some(area) = s.fades_area() {
+        if let Some(td) = s.true_dots() {
+            render_true_dots(c, a, w, h, ox, oy, s, td, o);
+        } else if let Some(area) = s.fades_area() {
             render_fades(c, a, w, h, ox, oy, s, area, o);
         } else {
             render_pure(c, a, w, h, ox, oy, s, s.angles(), o);
@@ -353,6 +388,94 @@ pub fn render_at_masked(
     }
     clean(&mut o, w, h, s.dpi);
     o
+}
+
+/// one coverage plane (0..1) through the single screen of `s` (first angle), with the
+/// sharp-edges option: true = ink. Shared by the true-colour looks (fades, true dots)
+fn screen_cov(cov: &[f32], w: usize, h: usize, ox: usize, oy: usize, s: &Settings) -> Vec<bool> {
+    let n = w * h;
+    let ang = s.angles()[0];
+    let grid = s.grid();
+    let mut b: Vec<bool> = match s.pattern {
+        Pattern::Am => {
+            let t = if s.calibrate {
+                calibrate(cov, s.lpi, s.shape, s.dpi, [ang; 3], grid)
+            } else {
+                cov.to_vec()
+            };
+            channel_at(&t, w, h, ox, oy, s.dpi, s.lpi, ang, s.shape, grid, s.hybrid)
+        }
+        Pattern::Fm => fm_bits_at(cov, w, h, s.dpi, ox, oy),
+        Pattern::Grain(g) => {
+            let tile = green_noise(g);
+            (0..n).map(|p| cov[p] > tile.at(p % w + ox, p / w + oy)).collect()
+        }
+        Pattern::Bayer | Pattern::Difusi | Pattern::Interlock => screen1(cov, w, h, ox, oy, s, ang, [ang; 3]),
+    };
+    if s.edges {
+        let tone3: Vec<f32> = cov.iter().flat_map(|&v| [v; 3]).collect();
+        let mut b3: Vec<bool> = b.iter().flat_map(|&v| [v; 3]).collect();
+        sharp_edges(&tone3, &mut b3, w, h, s.dpi);
+        b = b3.chunks_exact(3).map(|x| x[0] || x[1] || x[2]).collect();
+    }
+    b
+}
+
+/// "titik warna asli" (true-colour dots, the look of screen-printed band shirts made in
+/// one colour-halftone pass): ONE screen over the whole design; a dot prints in the
+/// design's own colour at that pixel (never split into pure inks, never brightened).
+/// Dot size follows the colour's strongest channel distance from the shirt colour (a
+/// full-strength colour gets `size`, darker shades smaller dots); colours whose
+/// luminance is at least `solid` away from the shirt (white, pale highlights) print
+/// solid. Every value depends only
+/// on the pixel and the absolute screen position, so bands equal the full render.
+#[allow(clippy::too_many_arguments)]
+fn render_true_dots(c: &[f32], a: &[f32], w: usize, h: usize, ox: usize, oy: usize, s: &Settings, td: TrueDots, o: &mut [u8]) {
+    let n = w * h;
+    let sh: [f32; 3] = match s.shirt {
+        Shirt::Hitam => [0.0; 3],
+        Shirt::Putih => [1.0; 3],
+        Shirt::Warna(rgb) => rgb,
+    };
+    let coloured = matches!(s.shirt, Shirt::Warna(_));
+    let lum = |v: [f32; 3]| 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+    let lsh = lum(sh);
+    let lrange = lsh.max(1.0 - lsh).max(1e-6);
+    let mut cov = vec![0f32; n];
+    cov.par_iter_mut().enumerate().for_each(|(p, cv)| {
+        let mut al = a[p];
+        if coloured && s.knockout > 0.0 {
+            let dr = c[p * 3] - sh[0];
+            let dg = c[p * 3 + 1] - sh[1];
+            let db = c[p * 3 + 2] - sh[2];
+            let d = (dr * dr + dg * dg + db * db).sqrt();
+            al *= ((d - s.knockout + 0.06) / 0.06).clamp(0.0, 1.0);
+        }
+        let mut seen = [0f32; 3];
+        let mut dist = 0f32;
+        for ch in 0..3 {
+            let v = al * c[p * 3 + ch] + (1.0 - al) * sh[ch];
+            seen[ch] = v;
+            dist = dist.max((v - sh[ch]).abs() / sh[ch].max(1.0 - sh[ch]));
+        }
+        let light = ((lum(seen) - lsh).abs() / lrange).min(1.0);
+        *cv = if dist < s.clip {
+            0.0
+        } else if td.solid < 1.0 && light >= td.solid {
+            1.0
+        } else {
+            (td.size * dist).min(1.0)
+        };
+    });
+    let b = screen_cov(&cov, w, h, ox, oy, s);
+    o.par_chunks_mut(4).enumerate().for_each(|(p, px)| {
+        if b[p] && cov[p] > 0.0 {
+            for ch in 0..3 {
+                px[ch] = (c[p * 3 + ch].clamp(0.0, 1.0) * 255.0).round_ties_even() as u8;
+            }
+            px[3] = 255;
+        }
+    });
 }
 
 /// "halftone only on fades" (port of `render_fades` in studiozea_ref.py): true colours,
@@ -396,30 +519,7 @@ fn render_fades(c: &[f32], a: &[f32], w: usize, h: usize, ox: usize, oy: usize, 
             }
             *cv = (dist / area).min(1.0);
         });
-    let ang = s.angles()[0];
-    let grid = s.grid();
-    let mut b: Vec<bool> = match s.pattern {
-        Pattern::Am => {
-            let t = if s.calibrate {
-                calibrate(&cov, s.lpi, s.shape, s.dpi, [ang; 3], grid)
-            } else {
-                cov.clone()
-            };
-            channel_at(&t, w, h, ox, oy, s.dpi, s.lpi, ang, s.shape, grid, s.hybrid)
-        }
-        Pattern::Fm => fm_bits_at(&cov, w, h, s.dpi, ox, oy),
-        Pattern::Grain(g) => {
-            let tile = green_noise(g);
-            (0..n).map(|p| cov[p] > tile.at(p % w + ox, p / w + oy)).collect()
-        }
-        Pattern::Bayer | Pattern::Difusi | Pattern::Interlock => screen1(&cov, w, h, ox, oy, s, ang, [ang; 3]),
-    };
-    if s.edges {
-        let tone3: Vec<f32> = cov.iter().flat_map(|&v| [v; 3]).collect();
-        let mut b3: Vec<bool> = b.iter().flat_map(|&v| [v; 3]).collect();
-        sharp_edges(&tone3, &mut b3, w, h, s.dpi);
-        b = b3.chunks_exact(3).map(|x| x[0] || x[1] || x[2]).collect();
-    }
+    let b = screen_cov(&cov, w, h, ox, oy, s);
     o.par_chunks_mut(4).enumerate().for_each(|(p, px)| {
         if b[p] {
             let k = cov[p].max(1e-6);

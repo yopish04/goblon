@@ -22,7 +22,7 @@ pub mod upscale;
 #[cfg(feature = "gpu")]
 mod upscale_gpu;
 
-pub use render::{render, GridChoice, KMode, Pattern, Settings, Shirt, TextStyle};
+pub use render::{render, GridChoice, KMode, Pattern, Settings, Shirt, TextStyle, TrueDots};
 pub use screen::{choose_grid, screen_info, Grid, ScreenInfo, Shape};
 
 use serde::{Deserialize, Serialize};

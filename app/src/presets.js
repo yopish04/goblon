@@ -71,6 +71,7 @@ export const PRESETS = [
   { id: 'segitiga', name: 'Retro: segitiga (10 LPI)', en: 'Retro: triangles (10 LPI)', set: { pattern: 'am', lpi: 10, shape: 'segitiga', grid: 'auto', edges: false, angle: 0, rosette: null, halftoneOn: true } },
   { id: 'interlock', name: 'Interlock rapi (35 LPI, 45°)', en: 'Clean interlock (35 LPI, 45°)', set: { pattern: 'interlock', lpi: 35, angle: null, edges: false, halftoneOn: true } },
   { id: 'difusi', name: 'Dither difusi (detail halus)', en: 'Diffusion dither (fine detail)', set: { pattern: 'difusi', edges: false, halftoneOn: true } },
+  { id: 'bandtee', name: 'Band tee: titik warna asli (12 LPI)', en: 'Band tee: true-colour dots (12 LPI)', set: { pattern: 'am', lpi: 12, shape: 'bulat-murni', grid: 'auto', edges: false, angle: 22.5, rosette: null, halftoneOn: true, fades: false, trueDots: true, dotSize: 72, solidFrom: 92 } },
   { id: 'garis', name: 'Retro: garis (15 LPI, 45°)', en: 'Retro: lines (15 LPI, 45°)', set: { pattern: 'am', lpi: 15, shape: 'garis', grid: 'auto', edges: false, angle: 45, rosette: null, halftoneOn: true } },
 ]
 
@@ -102,6 +103,9 @@ export const DEFAULTS = {
   shirtCut: 12, // % : with halftone off, colours this close to the shirt colour are not printed
   fades: false, // halftone only on fades (true colours elsewhere)
   fadesArea: 50, // % : below this distance from the shirt colour the design becomes dots
+  trueDots: false, // "titik warna asli": one screen over everything, dots in the design's own colours
+  dotSize: 72, // % : true-colour dots: dot size of a full-strength colour
+  solidFrom: 92, // % : true-colour dots: colours at least this light print solid (100 = never)
   k: 'off',
   edges: false,
   distress: [],
@@ -187,7 +191,10 @@ export function toJob(s) {
       rosette: s.rosette == null ? null : !!s.rosette,
       resample: s.resample === 'bicubic' ? 'bicubic' : 'lanczos',
       shirt_cut: (Number.isFinite(Number(s.shirtCut)) ? Math.min(100, Math.max(0, Number(s.shirtCut))) : 12) / 100,
-      halftone_area: s.halftoneOn === false ? 0 : s.fades ? Math.min(100, Math.max(1, Number(s.fadesArea) || 50)) / 100 : null,
+      halftone_area: s.halftoneOn === false ? 0 : s.fades && !s.trueDots ? Math.min(100, Math.max(1, Number(s.fadesArea) || 50)) / 100 : null,
+      true_dots: s.halftoneOn !== false && s.trueDots
+        ? { size: Math.min(100, Math.max(1, Number(s.dotSize) || 72)) / 100, solid: Math.min(100, Math.max(1, Number(s.solidFrom) || 92)) / 100 }
+        : null,
       protect_text: !!s.protectText && s.halftoneOn !== false,
       text_style: s.textStyle === 'halus' ? 'halus' : 'padat',
       pattern,
