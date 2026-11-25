@@ -573,7 +573,10 @@ fn old_ui_jobs_render_unchanged() {
         .unwrap();
     let jobs: Vec<Job> = serde_json::from_str(&raw).unwrap();
     let src = io::load(&golden("in_art_rgba.png")).unwrap();
-    for (i, mut job) in jobs.into_iter().enumerate() {
+    // the jobs recorded before textures existed; jobs added later (e.g. the band-tee
+    // preset) have no "before" render, they are checked by ui_jobs.rs
+    assert!(jobs.len() >= UI_JOBS_BEFORE.len());
+    for (i, mut job) in jobs.into_iter().take(UI_JOBS_BEFORE.len()).enumerate() {
         assert!(job.settings.distress.is_empty());
         job.width_cm = Some(5.0);
         let out = run(&src, &job);
