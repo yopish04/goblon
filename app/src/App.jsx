@@ -853,7 +853,7 @@ export default function App() {
     const js = toJob(s)
     const ss = js.settings
     const pat = typeof ss.pattern === 'string' ? ss.pattern : `grain-${ss.pattern.grain}`
-    const suffix = `_${ss.dpi}dpi_${ss.halftone_area === 0 ? 'tanpa-halftone' : pat === 'am' ? ss.lpi + 'lpi-' + ss.shape : pat}`
+    const suffix = `_${ss.dpi}dpi_${ss.halftone_area === 0 ? 'tanpa-halftone' : (ss.true_dots ? 'titik-warna-' : '') + (pat === 'am' ? ss.lpi + 'lpi-' + ss.shape : pat)}`
     setBatch((b) => ({ ...b, running: true, cur: null, log: [], done: null }))
     try {
       await invoke('batch_export', { paths: batch.files, outDir: batch.dir, job: js, fitCm: s.batchFit === 'kotak' ? [Number(s.batchW), Number(s.batchH)] : null, marginMm: Number(s.marginMm) || 0, suffix, ai: s.batchAi ? AI_DENOISE[s.aiHalus] ?? 0.5 : null, aiDevice: s.aiDevice })
@@ -1404,7 +1404,7 @@ export default function App() {
                 <Slider min={20} max={100} step={1} value={s.dotSize} onCommit={(v) => set({ dotSize: v })} />
                 <NumField className="short" value={s.dotSize} min={1} max={100} step={1} onCommit={(v) => set({ dotSize: v })} />
               </Row>
-              <Row label={L('Padat mulai', 'Solid from')} hint={L('Warna seterang ini atau lebih (%) dicetak solid tanpa titik: putih dan sorotan terang. Turunkan (mis. 75) supaya kuning juga solid; 100 = tidak ada yang solid.', 'Colours this light or lighter (%) print solid, without dots: white and bright highlights. Lower it (e.g. 75) to make yellow solid too; 100 = nothing solid.')}>
+              <Row label={L('Padat mulai', 'Solid from')} hint={L('Warna yang kecerahannya sejauh ini (%) atau lebih dari warna kaos dicetak solid tanpa titik. Di kaos gelap: putih dan sorotan terang; di kaos putih: hitam dan warna gelap. Turunkan (mis. 75) supaya lebih banyak yang solid; 100 = tidak ada yang solid.', 'Colours whose brightness is this far (%) or more from the shirt colour print solid, without dots. On a dark shirt: white and bright highlights; on a white shirt: black and dark colours. Lower it (e.g. 75) for more solid areas; 100 = nothing solid.')}>
                 <Slider min={50} max={100} step={1} value={s.solidFrom} onCommit={(v) => set({ solidFrom: v })} />
                 <NumField className="short" value={s.solidFrom} min={1} max={100} step={1} onCommit={(v) => set({ solidFrom: v })} />
               </Row>

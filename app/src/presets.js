@@ -60,6 +60,8 @@ export const SIZES = [
 ]
 
 const AUTO_ANGLE = { angle: null, rosette: null, halftoneOn: true }
+// every preset says whether the true-colour dots look is on (only 'bandtee' turns it on),
+// so choosing another preset after it gives that preset's own look
 export const PRESETS = [
   { id: 'ref', name: 'Referensi (35 LPI rosette)', en: 'Classic (35 LPI rosette)', set: { pattern: 'am', lpi: 35, shape: 'bulat', grid: 'auto', k: 'off', edges: false, ...AUTO_ANGLE } },
   { id: 'tajam', name: 'Tajam (tepi huruf bersih)', en: 'Sharp (clean text edges)', set: { pattern: 'am', lpi: 35, shape: 'bulat', grid: 'auto', k: 'off', edges: true, ...AUTO_ANGLE } },
@@ -73,7 +75,7 @@ export const PRESETS = [
   { id: 'difusi', name: 'Dither difusi (detail halus)', en: 'Diffusion dither (fine detail)', set: { pattern: 'difusi', edges: false, halftoneOn: true } },
   { id: 'bandtee', name: 'Band tee: titik warna asli (12 LPI)', en: 'Band tee: true-colour dots (12 LPI)', set: { pattern: 'am', lpi: 12, shape: 'bulat-murni', grid: 'auto', edges: false, angle: 22.5, rosette: null, halftoneOn: true, fades: false, trueDots: true, dotSize: 72, solidFrom: 92 } },
   { id: 'garis', name: 'Retro: garis (15 LPI, 45°)', en: 'Retro: lines (15 LPI, 45°)', set: { pattern: 'am', lpi: 15, shape: 'garis', grid: 'auto', edges: false, angle: 45, rosette: null, halftoneOn: true } },
-]
+].map((p) => ({ ...p, set: { trueDots: false, ...p.set } }))
 
 export const DEFAULTS = {
   shirtType: 'hitam', // hitam | putih | warna
