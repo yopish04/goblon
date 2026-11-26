@@ -138,6 +138,14 @@ struct Args {
     /// with --sablon: target chroma boost in percent
     #[arg(long = "boost", default_value_t = 0.0)]
     boost: f32,
+    /// with --sablon: "hemat tinta" 0-100 %: less underbase / ink where it changes the
+    /// colour only a little
+    #[arg(long, default_value_t = 0.0)]
+    hemat_tinta: f32,
+    /// with --sablon: angle of the white films (underbase, highlight) on their own
+    /// screen, e.g. 7.5 with colours at 22.5 (default: the colour angle)
+    #[arg(long, allow_hyphen_values = true)]
+    sudut_putih: Option<f64>,
     /// eraser strokes (JSON list of {"mode":"hapus"|"kembalikan","r":px,"pts":[[x,y],...]}
     /// in source pixels), applied after background removal, before crop
     #[arg(long = "coretan", value_name = "FILE.json")]
@@ -457,6 +465,8 @@ fn main() -> Result<()> {
             expand_px: a.expand,
             drop_below: a.buang,
             boost: a.boost / 100.0,
+            ink_saver: a.hemat_tinta / 100.0,
+            white_angle: a.sudut_putih,
             lpi: a.lpi_film,
             angle: a.sudut.unwrap_or(25.0),
             ..Default::default()

@@ -145,6 +145,14 @@ pub struct SepSettings {
     /// colours aimed at this much more saturated than the design (0.15 = +15 %
     /// chroma): prints often look calmer than the screen
     pub boost: f32,
+    /// "hemat tinta" 0..1: every ink and the underbase get a price, so the solver
+    /// leaves out ink that changes the colour only a little (less ink, softer print,
+    /// cheaper), the way a hand separation keeps the base thin. 0 = colour first
+    pub ink_saver: f32,
+    /// angle of the white films (underbase and highlight white) when they should not
+    /// share the colours' screen (e.g. 15 deg away, as in hand-made film separations:
+    /// a shifted white screen gives no moire with the colours). None = the colour angle
+    pub white_angle: Option<f64>,
 }
 
 impl Default for SepSettings {
@@ -166,6 +174,8 @@ impl Default for SepSettings {
             expand_px: 0,
             drop_below: 0.3,
             boost: 0.0,
+            ink_saver: 0.0,
+            white_angle: None,
         }
     }
 }
@@ -208,6 +218,12 @@ impl SepSettings {
         }
         if !(self.boost.is_finite() && (0.0..=0.5).contains(&self.boost)) {
             return Err("boost warna harus 0 sampai 50 %".into());
+        }
+        if !(self.ink_saver.is_finite() && (0.0..=1.0).contains(&self.ink_saver)) {
+            return Err("hemat tinta harus 0 sampai 100 %".into());
+        }
+        if self.white_angle.is_some_and(|a| !a.is_finite()) {
+            return Err("sudut film putih tidak valid".into());
         }
         Ok(())
     }
@@ -398,6 +414,13 @@ struct Model {
     inv: Vec<bool>,
     /// chroma boost of the targets
     boost: f32,
+    /// price per unit of ink coverage in the solver (see `cost`)
+    ink_cost: f32,
+    /// the white films (underbase, highlight `hl`) on their own screen: their dots fall
+    /// independently of the colours' (which stay dot on dot among themselves)
+    white_free: bool,
+    /// index of the highlight white ink, if any
+    hl: Option<usize>,
 }
 
 impl Model {
@@ -410,6 +433,9 @@ impl Model {
             dot_on_dot: false,
             inv: vec![false; inks.len()],
             boost: 0.0,
+            ink_cost: 2e-5,
+            white_free: false,
+            hl: None,
         }
     }
 
@@ -461,13 +487,22 @@ impl Model {
     /// `mix` (dots falling independently) would be wrong as soon as inks are mixed.
     /// An inverted film (interlock) prints where the threshold is above 1 - coverage.
     fn mix_dot(&self, u: f32, c: &[f32]) -> [f32; 3] {
+        self.mix_dot_with(u, None, c, None)
+    }
+
+    /// `mix_dot` where the base can be fixed on / off (`fixed`, not on the screen) and
+    /// one ink (`skip`, the highlight white on its own screen) left out
+    fn mix_dot_with(&self, u: f32, fixed: Option<bool>, c: &[f32], skip: Option<usize>) -> [f32; 3] {
         let mut bp = [0f32; MAX_INKS + 3];
         let mut nb = 0;
-        if self.base.is_some() {
+        if self.base.is_some() && fixed.is_none() {
             bp[nb] = u.clamp(0.0, 1.0);
             nb += 1;
         }
         for (k, &v) in c.iter().enumerate() {
+            if Some(k) == skip {
+                continue;
+            }
             let v = v.clamp(0.0, 1.0);
             bp[nb] = if self.inv[k] { 1.0 - v } else { v };
             nb += 1;
@@ -484,7 +519,8 @@ impl Model {
             // thresholds in (a, b]: the same layers print over the whole interval
             let t = 0.5 * (a + b);
             let col = self.print(|k| match k {
-                None => (u > t) as u8 as f32,
+                None => fixed.map_or((u > t) as u8 as f32, |on| on as u8 as f32),
+                Some(k) if Some(k) == skip => 0.0,
                 Some(k) if self.inv[k] => (1.0 - c[k] < t) as u8 as f32,
                 Some(k) => (c[k] > t) as u8 as f32,
             });
@@ -500,7 +536,24 @@ impl Model {
     /// else `mix`
     #[inline]
     fn avg(&self, u: f32, c: &[f32]) -> [f32; 3] {
-        if self.dot_on_dot {
+        if self.dot_on_dot && self.white_free {
+            // white films on their own screen: the base dots fall independently of
+            // the colour stack (exact average over base on / off); the highlight is
+            // the last layer and a layer is linear in what is below, so it applies to
+            // the average
+            let stack = |on: bool| self.mix_dot_with(u, Some(on), c, self.hl);
+            let (a, b) = if self.base.is_some() { (stack(true), stack(false)) } else { (stack(false), stack(false)) };
+            let uu = if self.base.is_some() { u.clamp(0.0, 1.0) } else { 0.0 };
+            let mut col = [0f32; 3];
+            for ch in 0..3 {
+                col[ch] = uu * a[ch] + (1.0 - uu) * b[ch];
+            }
+            if let Some(h) = self.hl {
+                let (ink, op) = self.inks[h];
+                Model::layer(&mut col, ink, c[h].clamp(0.0, 1.0), op);
+            }
+            col
+        } else if self.dot_on_dot {
             self.mix_dot(u, c)
         } else {
             self.mix(u, c)
@@ -536,6 +589,9 @@ impl Rng {
 /// design colours this close to the shirt colour (OKLab) need no ink: the shirt shows
 const NEAR_SHIRT: f32 = 0.12;
 
+/// on a dark shirt no automatic ink this close to the shirt colour (OKLab)
+const NEAR_DARK_INK: f32 = 0.24;
+
 /// the ink set for a design on `shirt` (sRGB 0..1): `n` inks in print order. Light
 /// to dark, black next to last, the highlight white last (dark shirts, `highlight`).
 pub fn auto_inks(p: &Prepared, shirt: [f32; 3], n: usize, highlight: bool) -> Vec<Ink> {
@@ -563,7 +619,16 @@ pub fn auto_inks(p: &Prepared, shirt: [f32; 3], n: usize, highlight: bool) -> Ve
     let k = if use_white { n - 1 } else { n }.min(s.len());
     // candidates: many clusters (purified), then the k inks that reach the design
     // colours best (alone, mixed with the shirt / white, or two inks mixed)
-    let cand = kmeans_inks(&s, (k * 4).clamp(k, 32));
+    let mut cand = kmeans_inks(&s, (k * 4).clamp(k, 32));
+    // on a dark shirt the shirt itself is the black: a near-black ink only darkens
+    // what the base made light, a screen and ink for almost nothing (hand separations
+    // leave the base out there instead)
+    if dark {
+        let keep: Vec<([f32; 3], f32)> = cand.iter().copied().filter(|(c, _)| !blackish(*c) && dist2(*c, sh) > NEAR_DARK_INK * NEAR_DARK_INK).collect();
+        if !keep.is_empty() {
+            cand = keep;
+        }
+    }
     let mut inks: Vec<[f32; 3]> = if k == 0 { Vec::new() } else { pick_inks(&cand, k, sh, dark || sh[0] > 0.9) };
     // two inks that came out (almost) the same: one is enough; an ink (almost) the
     // shirt colour prints nothing new
@@ -979,7 +1044,7 @@ fn cost(m: &Model, x: &[f32], t: [f32; 3]) -> f32 {
     let p = oklab(m.avg(x[0], &x[1..]));
     // a tiny price for ink keeps unneeded inks (and base) at zero
     let ink: f32 = x[1..].iter().sum::<f32>() + 0.5 * x[0];
-    dist2(p, t) + 2e-5 * ink
+    dist2(p, t) + m.ink_cost * ink
 }
 
 /// coverages whose print is closest to `t`: coordinate descent with golden section
@@ -1106,6 +1171,17 @@ pub fn separate(p: &Prepared, s: &Settings, sep: &SepSettings) -> Separation {
     };
     let used: Vec<Ink> = keep.iter().map(|&i| inks[i]).collect();
     let ni = used.len();
+    // lettering that prints solid: in the text mask and close enough to one ink (as in
+    // `coverages`), the rest of the mask keeps its dots
+    let flat: Option<Vec<bool>> = solid.map(|sm| {
+        (0..w * h)
+            .into_par_iter()
+            .map_init(
+                || vec![0f32; 1 + ni],
+                |x, q| sm[q] >= 0.5 && nearest(&m, [p.rgb[q * 3], p.rgb[q * 3 + 1], p.rgb[q * 3 + 2]], x) <= SOLID_TEXT_MAX,
+            )
+            .collect()
+    });
     let is_hl = |i: usize| base.is_some() && i + 1 == ni && used[i].rgb == [255, 255, 255];
     // expand: the colour films a little wider (trapping); never the highlight white
     if sep.expand_px > 0 {
@@ -1126,7 +1202,14 @@ pub fn separate(p: &Prepared, s: &Settings, sep: &SepSettings) -> Separation {
         .map(|f| {
             let c = &cov[f];
             let inverted = f > 0 && m.inv[f - 1];
-            let angle = if f > 0 && sep.dot_style == DotStyle::Roset { (sep.angle + ROSET[(f - 1) % ROSET.len()]).rem_euclid(180.0) } else { sep.angle };
+            let white = f == 0 || is_hl(f - 1);
+            let angle = if f > 0 && sep.dot_style == DotStyle::Roset {
+                (sep.angle + ROSET[(f - 1) % ROSET.len()]).rem_euclid(180.0)
+            } else if white && m.white_free {
+                sep.white_angle.unwrap_or(sep.angle).rem_euclid(180.0)
+            } else {
+                sep.angle
+            };
             let mut bits: Vec<bool> = match sep.method {
                 Method::Simulasi => {
                     // an inverted film prints where the threshold is above 1 - coverage
@@ -1136,9 +1219,9 @@ pub fn separate(p: &Prepared, s: &Settings, sep: &SepSettings) -> Separation {
                         b.par_iter_mut().for_each(|o| *o = !*o);
                     }
                     // solid text: the coverage itself (0 or 1), not dots
-                    if let Some(sm) = solid {
+                    if let Some(fm) = &flat {
                         b.par_iter_mut().enumerate().for_each(|(q, o)| {
-                            if sm[q] >= 0.5 {
+                            if fm[q] {
                                 *o = c[q] >= 128;
                             }
                         });
@@ -1170,6 +1253,12 @@ pub fn separate(p: &Prepared, s: &Settings, sep: &SepSettings) -> Separation {
 fn model_of(shirt: [f32; 3], base: Option<f32>, used: &[Ink], base_after: usize, sep: &SepSettings) -> Model {
     let mut m = Model::new(shirt, base, used, base_after);
     m.boost = sep.boost;
+    // hemat tinta: up to ~0.8 dE (OKLab x 100) of colour traded for a full layer of ink
+    m.ink_cost = 2e-5 + sep.ink_saver * 2.4e-4;
+    m.hl = (base.is_some() && used.last().is_some_and(|i| i.rgb == [255, 255, 255])).then(|| used.len() - 1);
+    m.white_free = sep.method == Method::Simulasi
+        && sep.dot_style != DotStyle::Roset
+        && sep.white_angle.is_some_and(|a| (a - sep.angle).rem_euclid(180.0).min((sep.angle - a).rem_euclid(180.0)) > 0.5);
     if sep.method == Method::Simulasi {
         match sep.dot_style {
             DotStyle::SatuSudut => m.dot_on_dot = true,
@@ -1230,8 +1319,8 @@ fn coverages(p: &Prepared, alpha: &[f32], solid: Option<&Vec<f32>>, m: &Model, u
                             continue;
                         }
                         let c = [p.rgb[q * 3], p.rgb[q * 3 + 1], p.rgb[q * 3 + 2]];
-                        if solid.is_some_and(|sm| sm[q] >= 0.5) {
-                            nearest(m, c, &mut x_);
+                        let flat = solid.is_some_and(|sm| sm[q] >= 0.5) && nearest(m, c, &mut x_) <= SOLID_TEXT_MAX;
+                        if flat {
                             if a < 0.5 {
                                 x_.iter_mut().for_each(|v| *v = 0.0);
                             }
@@ -1278,8 +1367,14 @@ fn coverages(p: &Prepared, alpha: &[f32], solid: Option<&Vec<f32>>, m: &Model, u
     cov
 }
 
-/// the single ink (on full underbase) or nothing whose print is nearest to `c` (sRGB)
-fn nearest(m: &Model, c: [f32; 3], out: &mut [f32]) {
+/// lettering prints solid in one ink only when one ink (or nothing) is this close to
+/// its colour (OKLab); farther colours (a soft cloud the text finder took for text,
+/// a gradient letter) keep their dots instead of turning into a flat wrong colour
+const SOLID_TEXT_MAX: f32 = 0.09;
+
+/// the single ink (on full underbase) or nothing whose print is nearest to `c` (sRGB);
+/// returns that distance (OKLab)
+fn nearest(m: &Model, c: [f32; 3], out: &mut [f32]) -> f32 {
     let t = m.target(c);
     out.iter_mut().for_each(|v| *v = 0.0);
     let mut best = dist2(oklab(m.shirt), t);
@@ -1299,6 +1394,7 @@ fn nearest(m: &Model, c: [f32; 3], out: &mut [f32]) {
         out[0] = if m.base.is_some() { 1.0 } else { 0.0 };
         out[1 + k] = 1.0;
     }
+    best.sqrt()
 }
 
 /// index separation: k x k blocks, each gets one ink (on base) or nothing, by error

@@ -148,8 +148,21 @@ export const DEFAULTS = {
   sepExpand: 0,
   sepDrop: 0.3,
   sepBoost: 0,
+  sepSaver: 0, // % : "hemat tinta": less underbase / ink where it changes the colour only a little
+  sepWhiteAngle: null, // white films (underbase, highlight) on their own angle; null = the colour angle
   sepMargin: 12,
 }
+
+/** ready-made separation setups (Sablon). 'pro': learnt from hand-made film separations
+ *  of band shirts (CorelDRAW): 35 LPI, colours dot on dot at 22.5 deg, the white films on
+ *  their own screen 15 deg away (no moire, robust to a shifted white screen), a thinner
+ *  base and highlight, lettering / logos solid (block film) */
+export const SEP_PRESETS = [
+  { id: 'pro', name: 'Film PRO (35 LPI, putih beda sudut, hemat tinta)', en: 'PRO films (35 LPI, white on its own angle, ink saver)',
+    set: { sepMethod: 'simulasi', sepSet: 'auto', sepColors: 6, sepInks: [], sepBaseAfter: 0, sepBase: 'auto', sepHighlight: true, sepLpi: 35, sepAngle: 22.5, sepWhiteAngle: 7.5, sepSaver: 50, sepShape: 'elips', sepDots: 'satu-sudut', sepChoke: 0.1, protectText: true } },
+  { id: 'standar', name: 'Standar StudioZea (55 LPI)', en: 'StudioZea standard (55 LPI)',
+    set: { sepMethod: 'simulasi', sepSet: 'auto', sepColors: 6, sepInks: [], sepBaseAfter: 0, sepBase: 'auto', sepHighlight: true, sepLpi: 55, sepAngle: 25, sepWhiteAngle: null, sepSaver: 0, sepShape: 'elips', sepDots: 'satu-sudut', sepChoke: 0.1 } },
+]
 
 /** AI smoothing choice -> Real-ESRGAN denoise strength (1 = smooth, 0 = keep noise) */
 export const AI_DENOISE = { halus: 1, seimbang: 0.5, tekstur: 0.2 }
@@ -286,7 +299,7 @@ function okValue(k, v) {
   if (k === 'erase') return Array.isArray(v) && v.length <= 20000 && v.every(okStroke)
   if (k === 'sepInks') return okInks(v)
   if (k === 'distress') return Array.isArray(v) && v.length <= 4 && v.every((l) => l && typeof l === 'object' && (l.path === null || typeof l.path === 'string'))
-  if (k === 'angle' || k === 'bgTolerance') return v === null || Number.isFinite(v)
+  if (k === 'angle' || k === 'bgTolerance' || k === 'sepWhiteAngle') return v === null || Number.isFinite(v)
   if (k === 'rosette' || k === 'bgPockets') return v === null || typeof v === 'boolean'
   if (typeof d === 'number') return Number.isFinite(v)
   return typeof v === typeof d
@@ -326,6 +339,8 @@ export function toSep(s) {
     expand_px: Math.round(num(s.sepExpand, 0, 0, 20)),
     drop_below: num(s.sepDrop, 0.3, 0, 10),
     boost: num(s.sepBoost, 0, 0, 50) / 100,
+    ink_saver: num(s.sepSaver, 0, 0, 100) / 100,
+    white_angle: s.sepWhiteAngle == null || !Number.isFinite(Number(s.sepWhiteAngle)) ? null : Math.min(360, Math.max(-360, Number(s.sepWhiteAngle))),
   }
 }
 

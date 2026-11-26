@@ -272,3 +272,83 @@ fn base_position_expand_and_boost() {
     let blue = |r: &studiozea_engine::sablon::Separation| r.films.iter().find(|f| f.src == Some(3)).unwrap().bits.coverage();
     assert!(blue(&b) > blue(&a) * 1.05, "{} -> {}", blue(&a), blue(&b));
 }
+
+/// learnt from hand-made film separations: the white films on their own angle, the
+/// colours dot on dot at theirs; old settings (no new fields) load unchanged
+#[test]
+fn white_films_on_their_own_angle() {
+    let p = design();
+    let sep = SepSettings { colors: 5, lpi: 35.0, angle: 22.5, white_angle: Some(7.5), ..Default::default() };
+    let r = separate(&p, &settings(Shirt::Hitam), &sep);
+    let base = r.films.iter().find(|f| f.role == Role::Underbase).expect("underbase");
+    assert_eq!(base.angle, Some(7.5));
+    for f in &r.films {
+        match f.role {
+            Role::Underbase | Role::Highlight => assert_eq!(f.angle, Some(7.5), "{:?}", f.role),
+            Role::Ink => assert_eq!(f.angle, Some(22.5)),
+        }
+    }
+    assert!(r.delta_e < 10.0, "dE {}", r.delta_e);
+    // the same angle (or none given) keeps the old behaviour
+    let same = separate(&p, &settings(Shirt::Hitam), &SepSettings { white_angle: None, ..sep.clone() });
+    assert!(same.films.iter().all(|f| f.angle == Some(22.5)));
+    let old: SepSettings = serde_json::from_str(r#"{"colors": 5}"#).unwrap();
+    assert!(old.white_angle.is_none() && old.ink_saver == 0.0);
+}
+
+/// "hemat tinta": less ink in total (underbase included), the colours stay close
+#[test]
+fn ink_saver_uses_less_ink() {
+    let p = design();
+    let ink = |r: &studiozea_engine::sablon::Separation| r.films.iter().map(|f| f.bits.coverage() as f64).sum::<f64>();
+    let base = SepSettings { colors: 5, lpi: 35.0, angle: 22.5, ..Default::default() };
+    let a = separate(&p, &settings(Shirt::Hitam), &base);
+    let b = separate(&p, &settings(Shirt::Hitam), &SepSettings { ink_saver: 1.0, ..base.clone() });
+    println!("ink {:.3} -> {:.3}, dE {:.2} -> {:.2}", ink(&a), ink(&b), a.delta_e, b.delta_e);
+    assert!(ink(&b) < ink(&a) * 0.97, "ink {} -> {}", ink(&a), ink(&b));
+    assert!(b.delta_e < a.delta_e + 3.0, "dE {} -> {}", a.delta_e, b.delta_e);
+    assert!(SepSettings { ink_saver: 1.5, ..base }.check().is_err());
+}
+
+/// "Lindungi teks" in sablon: lettering prints solid in one ink only where one ink can
+/// match its colour. A soft colour the text finder put in the mask (a cloud under a
+/// logo) keeps its dots instead of turning into a flat patch of the nearest ink
+#[test]
+fn text_mask_keeps_dots_where_no_ink_matches() {
+    let mut p = design();
+    let (w, h) = (p.w, p.h);
+    // the text mask: the red patch (one ink matches) and the middle of the grey ramp
+    // (no single ink is a mid grey on a black shirt)
+    let mut sm = vec![0f32; w * h];
+    for y in 20..60 {
+        for x in 12..50 {
+            sm[y * w + x] = 1.0;
+        }
+    }
+    for y in 100..140 {
+        for x in 100..140 {
+            sm[y * w + x] = 1.0;
+        }
+    }
+    p.solid = Some(sm);
+    let s = Settings { protect_text: true, ..settings(Shirt::Hitam) };
+    let sep = SepSettings { colors: 5, lpi: 35.0, angle: 22.5, ..Default::default() };
+    let r = separate(&p, &s, &sep);
+    let base = r.films.iter().find(|f| f.role == Role::Underbase).unwrap();
+    let share = |x0: usize, x1: usize, y0: usize, y1: usize| {
+        let mut n = 0;
+        for y in y0..y1 {
+            for x in x0..x1 {
+                n += base.bits.get(y * w + x) as usize;
+            }
+        }
+        n as f64 / ((x1 - x0) * (y1 - y0)) as f64
+    };
+    // red lettering: solid base under it
+    let red = share(16, 46, 24, 56);
+    assert!(red > 0.97, "red text base {red}");
+    // the grey inside the mask: dots, neither a solid block nor nothing
+    let grey = share(104, 136, 104, 136);
+    assert!((0.05..0.9).contains(&grey), "grey in the text mask {grey}");
+    let _ = h;
+}

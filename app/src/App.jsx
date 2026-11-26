@@ -4,7 +4,7 @@ import { listen } from '@tauri-apps/api/event'
 import { open, save } from '@tauri-apps/plugin-dialog'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import logoMark from './logo-mark.svg'
-import { AI_DENOISE, AI_MAX_PX, LOW_DPI, aiScaleFor, ANGLES, DEFAULTS, IMAGE_KEYS, isTextMode, textFineLpi, shirtFor, DPIS, SIZES, LOOK_KEYS, PROJECT_KEYS, mergeSettings, pickSettings, LPI_MAX, LPI_MIN, PATTERNS, PRESETS, SHAPES, newTexture, optLabel, sizeLabel, shirtCss, toJob, toSep, inkName, rgbHex, hexRgb, okInks, shirtTone, inkSets } from './presets.js'
+import { SEP_PRESETS, AI_DENOISE, AI_MAX_PX, LOW_DPI, aiScaleFor, ANGLES, DEFAULTS, IMAGE_KEYS, isTextMode, textFineLpi, shirtFor, DPIS, SIZES, LOOK_KEYS, PROJECT_KEYS, mergeSettings, pickSettings, LPI_MAX, LPI_MIN, PATTERNS, PRESETS, SHAPES, newTexture, optLabel, sizeLabel, shirtCss, toJob, toSep, inkName, rgbHex, hexRgb, okInks, shirtTone, inkSets } from './presets.js'
 import CanvasViewer from './CanvasViewer.jsx'
 import { Help, Menu, NumField, Row, Seg, Slider, fmt, unpack } from './ui.jsx'
 import Icon from './icons.jsx'
@@ -1460,6 +1460,12 @@ export default function App() {
   const sim = s.sepMethod === 'simulasi'
   const sectionWarna = (
     <>
+      <Row label="Preset" hint={L('Film PRO: dipelajari dari film pecah warna buatan tangan (CorelDRAW) untuk kaos band: 35 LPI, warna titik di atas titik 22,5°, film putih (underbase + highlight) di sudut sendiri 7,5° supaya tidak moire dan tetap rapi bila screen putih sedikit bergeser, underbase dan highlight lebih tipis (hemat tinta), tulisan / logo padat seperti film block. Standar: pengaturan bawaan StudioZea.', 'PRO films: learnt from hand-made film separations (CorelDRAW) for band shirts: 35 LPI, colours dot on dot at 22.5°, the white films (underbase + highlight) on their own 7.5° angle so there is no moiré and the print stays clean when the white screen shifts a little, a thinner underbase and highlight (ink saver), lettering / logos solid like a block film. Standard: the StudioZea defaults.')}>
+        <select value="" onChange={(e) => { const p = SEP_PRESETS.find((x) => x.id === e.target.value); if (p) set(p.set) }}>
+          <option value="">{L('— pilih preset —', '— choose a preset —')}</option>
+          {SEP_PRESETS.map((p) => <option key={p.id} value={p.id}>{L(p.name, p.en)}</option>)}
+        </select>
+      </Row>
       <Row label={L('Metode', 'Method')}
         hint={L('Simulasi: titik halftone per tinta, untuk desain foto / gradasi (seperti simulated process). Index: kotak-kotak kecil, satu tinta per titik, warna tajam tanpa moire. Spot: warna rata tanpa titik, untuk desain vektor / warna blok.', 'Simulated: halftone dots per ink, for photo / gradient designs (simulated process). Index: small squares, one ink per dot, crisp colours without moiré. Spot: flat colours without dots, for vector / block-colour designs.')}>
         <Seg value={s.sepMethod} onChange={(v) => set({ sepMethod: v })} options={[['simulasi', L('Simulasi', 'Simulated')], ['index', 'Index'], ['spot', 'Spot']]} />
@@ -1486,7 +1492,7 @@ export default function App() {
           const f = film >= 0 ? sepFilms[film] : null
           const no = f ? `${film + 1}.` : sepFilms ? '–' : `${k + 1}.`
           // rosette: each film's angle; interlock: which films have inverted dots
-          const screen = f?.angle != null && s.sepDots === 'roset' ? ` · ${fmt(f.angle, 1)}°` : f?.inverted ? L(' · dibalik', ' · inverted') : ''
+          const screen = f?.angle != null && (s.sepDots === 'roset' || (s.sepWhiteAngle != null && f.role !== 'ink')) ? ` · ${fmt(f.angle, 1)}°` : f?.inverted ? L(' · dibalik', ' · inverted') : ''
           if (r.base) {
             return (
               <div className="ink" key="base">
@@ -1556,6 +1562,12 @@ export default function App() {
         <NumField className="short" value={s.sepDrop} min={0} max={10} step={0.1} digits={1} onCommit={(v) => set({ sepDrop: v })} />
         <span className="small"> %</span>
       </Row>
+      {s.sepMethod === 'simulasi' && (
+        <Row label={L('Hemat tinta', 'Ink saver')} hint={L('Underbase, highlight dan tinta dikurangi di bagian yang warnanya hanya berubah sedikit: lebih murah, cetakan lebih lembut. 50 % ≈ 12–17 % tinta lebih sedikit, 100 % ≈ 17–22 % (mendekati film buatan tangan), warna sedikit kurang persis. Bandingkan angka Kemiripan.', 'Underbase, highlight and inks reduced where the colour changes only a little: cheaper, a softer print. 50 % ≈ 12–17 % less ink, 100 % ≈ 17–22 % (close to hand-made films), colours slightly less exact. Compare the Match number.')}>
+          <Slider min={0} max={100} step={5} value={s.sepSaver} onCommit={(v) => set({ sepSaver: v })} />
+          <NumField className="short" value={s.sepSaver} min={0} max={100} step={5} digits={0} onCommit={(v) => set({ sepSaver: v })} />
+        </Row>
+      )}
       {s.sepMethod !== 'spot' && (
         <Row label={L('Boost warna', 'Colour boost')} note={s.sepBoost > 0 ? L('ΔE dihitung terhadap desain asli', 'ΔE is measured against the original design') : null}
           hint={L('Warna dibuat lebih jenuh dari desain (+%), karena hasil sablon di kaos sering terlihat lebih kalem dari layar. 0 = sesuai desain. Untuk satu tinta saja, pakai angka boost di daftar tinta.', 'Colours aimed more saturated than the design (+%), since prints on shirts often look calmer than the screen. 0 = as designed. For one ink only, use the boost number in the ink list.')}>
@@ -1574,6 +1586,15 @@ export default function App() {
             <span className="small">LPI · {L('sudut', 'angle')}</span>
             <NumField className="short" value={s.sepAngle} min={-90} max={90} step={0.5} digits={1} onCommit={(v) => set({ sepAngle: v })} />
             <span className="small">°</span>
+          </Row>
+          <Row label={L('Sudut putih', 'White angle')} hint={L('Film putih (underbase dan highlight) di sudut sendiri, mis. 15° dari warna (22,5° → 7,5°), seperti film pecah warna buatan tangan: tidak moire dengan warna, dan bila screen putih sedikit bergeser saat cetak, warnanya tetap rapi (diuji: geser 0,25 mm, selisih warna naik 0,4 saja, bukan 1,4). Sama = satu sudut dengan warna.', 'The white films (underbase and highlight) on their own angle, e.g. 15° from the colours (22.5° → 7.5°), like hand-made film separations: no moiré with the colours, and when the white screen shifts a little on press the colours stay clean (tested: a 0.25 mm shift raises the colour difference by 0.4, not 1.4). Same = one angle with the colours.')}>
+            <Seg value={s.sepWhiteAngle == null ? 'sama' : 'beda'} onChange={(v) => set({ sepWhiteAngle: v === 'sama' ? null : Number(s.sepAngle) - 15 })} options={[['sama', L('Sama', 'Same')], ['beda', L('Sendiri', 'Own')]]} />
+            {s.sepWhiteAngle != null && (
+              <>
+                <NumField className="short" value={s.sepWhiteAngle} min={-90} max={90} step={0.5} digits={1} onCommit={(v) => set({ sepWhiteAngle: v })} />
+                <span className="small">°</span>
+              </>
+            )}
           </Row>
           <Row label={L('Bentuk titik', 'Dot shape')}>
             <select value={s.sepShape} onChange={(e) => set({ sepShape: e.target.value })}>
