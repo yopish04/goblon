@@ -352,3 +352,47 @@ fn text_mask_keeps_dots_where_no_ink_matches() {
     assert!((0.05..0.9).contains(&grey), "grey in the text mask {grey}");
     let _ = h;
 }
+
+/// "titik putih maks.": a light gradient (cream to white) keeps dots in the white films
+/// instead of a flat solid patch; a flat white block stays solid
+#[test]
+fn max_white_dot_keeps_light_gradients_dotted() {
+    let (w, h) = (240, 160);
+    let mut rgb = vec![0f32; w * h * 3];
+    let mut alpha = vec![0f32; w * h];
+    for y in 8..h - 8 {
+        for x in 8..w - 8 {
+            let q = y * w + x;
+            alpha[q] = 1.0;
+            let c = if y < 80 {
+                // light shading, cream to white and back every ~1 cm (skin, a skull):
+                // a gradient slower than a few halftone cells counts as flat
+                let t = 0.5 - 0.5 * ((x - 8) as f32 * std::f32::consts::TAU / 110.0).cos();
+                [0.86 + 0.14 * t, 0.80 + 0.2 * t, 0.62 + 0.38 * t]
+            } else {
+                [1.0, 1.0, 1.0] // flat white block
+            };
+            rgb[q * 3..q * 3 + 3].copy_from_slice(&c);
+        }
+    }
+    let p = Prepared { w, h, pre_w: w, src_box: [0, 0, w, h], rgb, alpha, bg: None, bg_used: None, solid: None };
+    let base_share = |r: &studiozea_engine::sablon::Separation, x0: usize, x1: usize, y0: usize, y1: usize| {
+        let f = r.films.iter().find(|f| f.role == Role::Underbase).unwrap();
+        let mut n = 0;
+        for y in y0..y1 {
+            for x in x0..x1 {
+                n += f.bits.get(y * w + x) as usize;
+            }
+        }
+        n as f64 / ((x1 - x0) * (y1 - y0)) as f64
+    };
+    let sep = SepSettings { colors: 4, lpi: 35.0, angle: 22.5, ..Default::default() };
+    let off = separate(&p, &settings(Shirt::Hitam), &sep);
+    let on = separate(&p, &settings(Shirt::Hitam), &SepSettings { max_dot: 0.85, ..sep.clone() });
+    let (g_off, g_on) = (base_share(&off, 60, 220, 20, 70), base_share(&on, 60, 220, 20, 70));
+    let (b_off, b_on) = (base_share(&off, 20, 220, 95, 145), base_share(&on, 20, 220, 95, 145));
+    println!("gradient base {g_off:.3} -> {g_on:.3}, flat white {b_off:.3} -> {b_on:.3}");
+    assert!(g_on < 0.93 && g_on < g_off - 0.03, "gradient base {g_off} -> {g_on}");
+    assert!(b_on > 0.99, "flat white block stays solid: {b_on}");
+    assert!(SepSettings { max_dot: 0.3, ..sep }.check().is_err());
+}

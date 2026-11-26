@@ -1568,6 +1568,17 @@ export default function App() {
           <NumField className="short" value={s.sepSaver} min={0} max={100} step={5} digits={0} onCommit={(v) => set({ sepSaver: v })} />
         </Row>
       )}
+      {s.sepMethod === 'simulasi' && (
+        <Row label={L('Titik putih maks.', 'Max white dot')} hint={L('Gradasi halus: di bagian gradasi, underbase dan highlight paling banyak sekian persen, jadi gradasi terang (kulit, tengkorak, langit) tetap bertitik dan tidak jadi petak putih rata. Warna yang memang rata di desain (tulisan, garis putih) tetap padat. 85 % seperti film buatan tangan; 100 = mati.', 'Smooth gradients: in gradients the underbase and highlight print at most this much, so light gradients (skin, skulls, sky) keep their dots instead of turning into flat white patches. Colours that are flat in the design (lettering, white outlines) stay solid. 85 % like hand-made films; 100 = off.')}>
+          <Slider min={70} max={100} step={1} value={s.sepMaxDot} onCommit={(v) => set({ sepMaxDot: v })} />
+          <NumField className="short" value={s.sepMaxDot} min={50} max={100} step={1} digits={0} onCommit={(v) => set({ sepMaxDot: v })} />
+        </Row>
+      )}
+      {s.sepSet === 'auto' && shirtTone(s) === 'gelap' && (
+        <Row label={L('Tinta kuat', 'Strong inks')} hint={L('Kaos gelap: tinta otomatis hanya warna kuat, tanpa tinta krem / pastel. Bagian terang dibuat oleh underbase dan highlight putih, tinta memberi warnanya, seperti film buatan tangan. Tinta krem cenderung dicetak penuh dan membuat petak datar di kulit / tengkorak.', 'Dark shirts: automatic inks are strong colours only, no cream / pastel ink. The white base and highlight make the light tones, the inks the hue, as in hand-made films. A cream ink tends to print full and makes flat patches in skin / skulls.')}>
+          <input type="checkbox" checked={!!s.sepStrongInks} onChange={(e) => set({ sepStrongInks: e.target.checked, sepInks: [], sepBaseAfter: 0 })} />
+        </Row>
+      )}
       {s.sepMethod !== 'spot' && (
         <Row label={L('Boost warna', 'Colour boost')} note={s.sepBoost > 0 ? L('ΔE dihitung terhadap desain asli', 'ΔE is measured against the original design') : null}
           hint={L('Warna dibuat lebih jenuh dari desain (+%), karena hasil sablon di kaos sering terlihat lebih kalem dari layar. 0 = sesuai desain. Untuk satu tinta saja, pakai angka boost di daftar tinta.', 'Colours aimed more saturated than the design (+%), since prints on shirts often look calmer than the screen. 0 = as designed. For one ink only, use the boost number in the ink list.')}>

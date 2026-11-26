@@ -142,6 +142,13 @@ struct Args {
     /// colour only a little
     #[arg(long, default_value_t = 0.0)]
     hemat_tinta: f32,
+    /// with --sablon: "titik maksimum" 50-100 %: no film prints more than this in a
+    /// gradient (flat design colours still solid); 100 = off
+    #[arg(long, default_value_t = 100.0)]
+    titik_maks: f32,
+    /// with --sablon: strong inks only on dark shirts (no pastel / cream ink)
+    #[arg(long)]
+    tinta_kuat: bool,
     /// with --sablon: angle of the white films (underbase, highlight) on their own
     /// screen, e.g. 7.5 with colours at 22.5 (default: the colour angle)
     #[arg(long, allow_hyphen_values = true)]
@@ -466,7 +473,15 @@ fn main() -> Result<()> {
             drop_below: a.buang,
             boost: a.boost / 100.0,
             ink_saver: a.hemat_tinta / 100.0,
+            max_dot: a.titik_maks / 100.0,
+            strong_inks: a.tinta_kuat,
             white_angle: a.sudut_putih,
+            // --bentuk for the films too when given (default: the elliptical sim-process dot)
+            shape: if a.bentuk == "bulat" && !std::env::args().any(|x| x == "--bentuk" || x.starts_with("--bentuk=")) {
+                studiozea_engine::sablon::SepSettings::default().shape
+            } else {
+                Shape::parse(&a.bentuk).ok_or_else(|| anyhow::anyhow!("unknown bentuk {}", a.bentuk))?
+            },
             lpi: a.lpi_film,
             angle: a.sudut.unwrap_or(25.0),
             ..Default::default()

@@ -149,6 +149,15 @@ pub struct SepSettings {
     /// leaves out ink that changes the colour only a little (less ink, softer print,
     /// cheaper), the way a hand separation keeps the base thin. 0 = colour first
     pub ink_saver: f32,
+    /// "titik maksimum" 0.5..1: in a gradient no film prints more than this (a light
+    /// gradient whose colour the inks cannot quite reach otherwise turns into a flat
+    /// solid patch, base / ink at 100 %). Colours that are flat in the design (solid
+    /// lettering, blocks) still print solid. 1 = off. Hand separations keep ~90 %
+    pub max_dot: f32,
+    /// on dark shirts the automatic inks are strong colours only (no pastel / cream ink):
+    /// the white base and highlight make the light tones, the inks the hue, as in hand
+    /// separations (a cream ink at ~100 % made flat patches in light skin and skulls)
+    pub strong_inks: bool,
     /// angle of the white films (underbase and highlight white) when they should not
     /// share the colours' screen (e.g. 15 deg away, as in hand-made film separations:
     /// a shifted white screen gives no moire with the colours). None = the colour angle
@@ -175,6 +184,8 @@ impl Default for SepSettings {
             drop_below: 0.3,
             boost: 0.0,
             ink_saver: 0.0,
+            max_dot: 1.0,
+            strong_inks: false,
             white_angle: None,
         }
     }
@@ -221,6 +232,9 @@ impl SepSettings {
         }
         if !(self.ink_saver.is_finite() && (0.0..=1.0).contains(&self.ink_saver)) {
             return Err("hemat tinta harus 0 sampai 100 %".into());
+        }
+        if !(self.max_dot.is_finite() && (0.5..=1.0).contains(&self.max_dot)) {
+            return Err("titik maksimum harus 50 sampai 100 %".into());
         }
         if self.white_angle.is_some_and(|a| !a.is_finite()) {
             return Err("sudut film putih tidak valid".into());
@@ -595,6 +609,12 @@ const NEAR_DARK_INK: f32 = 0.24;
 /// the ink set for a design on `shirt` (sRGB 0..1): `n` inks in print order. Light
 /// to dark, black next to last, the highlight white last (dark shirts, `highlight`).
 pub fn auto_inks(p: &Prepared, shirt: [f32; 3], n: usize, highlight: bool) -> Vec<Ink> {
+    auto_inks_with(p, shirt, n, highlight, false)
+}
+
+/// `auto_inks`; `strong`: on a dark shirt no pastel / cream inks (see
+/// `SepSettings::strong_inks`)
+pub fn auto_inks_with(p: &Prepared, shirt: [f32; 3], n: usize, highlight: bool, strong: bool) -> Vec<Ink> {
     let n = n.clamp(1, MAX_INKS);
     let sh = oklab(shirt.map(lin));
     let dark = needs_underbase(shirt);
@@ -624,7 +644,12 @@ pub fn auto_inks(p: &Prepared, shirt: [f32; 3], n: usize, highlight: bool) -> Ve
     // what the base made light, a screen and ink for almost nothing (hand separations
     // leave the base out there instead)
     if dark {
-        let keep: Vec<([f32; 3], f32)> = cand.iter().copied().filter(|(c, _)| !blackish(*c) && dist2(*c, sh) > NEAR_DARK_INK * NEAR_DARK_INK).collect();
+        let keep: Vec<([f32; 3], f32)> = cand
+            .iter()
+            .copied()
+            .filter(|(c, _)| !blackish(*c) && dist2(*c, sh) > NEAR_DARK_INK * NEAR_DARK_INK)
+            .filter(|(c, _)| !strong || !(c[0] > 0.82 && chroma(*c) < 0.13))
+            .collect();
         if !keep.is_empty() {
             cand = keep;
         }
@@ -1137,7 +1162,7 @@ pub fn separate(p: &Prepared, s: &Settings, sep: &SepSettings) -> Separation {
     let (inks, base_after) = if !sep.inks.is_empty() {
         (sep.inks.clone(), sep.base_after.min(sep.inks.len()))
     } else if sep.ink_set == InkSet::Auto {
-        (auto_inks(p, shirt, sep.colors, sep.highlight), 0)
+        (auto_inks_with(p, shirt, sep.colors, sep.highlight, sep.strong_inks), 0)
     } else {
         preset_inks(sep.ink_set, shirt, sep.highlight)
     };
@@ -1183,6 +1208,12 @@ pub fn separate(p: &Prepared, s: &Settings, sep: &SepSettings) -> Separation {
             .collect()
     });
     let is_hl = |i: usize| base.is_some() && i + 1 == ni && used[i].rgb == [255, 255, 255];
+    if sep.method == Method::Simulasi && sep.max_dot < 1.0 {
+        // the white films only (underbase and highlight): a hole in the base under an
+        // ink just darkens that spot a little, while a hole in an ink over the base shows
+        // a white speck (a red logo with texture would get white dots)
+        cap_gradients(&mut cov, p, &alpha, flat.as_deref(), w, h, dpi, sep, |f| (f == 0 || is_hl(f - 1)).then_some(sep.max_dot));
+    }
     // expand: the colour films a little wider (trapping); never the highlight white
     if sep.expand_px > 0 {
         let d = 2 * sep.expand_px + 1;
@@ -1470,6 +1501,54 @@ fn index_cov(p: &Prepared, alpha: &[f32], m: &Model, k: usize, cov: &mut [Vec<u8
             }
         }
     }
+}
+
+/// "titik maksimum": a white film above `max_dot` where the design colour varies (a
+/// light gradient the inks cannot quite reach, clipped into a flat solid patch; above
+/// ~90 % the holes are too small to print and get filled anyway) prints `max_dot`
+/// instead, so the gradient keeps its dots. A solid area whose design colour is flat
+/// (lettering, a white outline) stays solid: the variation is measured over the full
+/// pixels of that film within two halftone cells, so soft edges do not count. Solid
+/// lettering (`flat`) is left alone; `cap_of(film)` = the cap, None = not capped.
+#[allow(clippy::too_many_arguments)]
+fn cap_gradients(cov: &mut [Vec<u8>], p: &Prepared, alpha: &[f32], flat: Option<&[bool]>, w: usize, h: usize, dpi: f64, sep: &SepSettings, cap_of: impl Fn(usize) -> Option<f32> + Sync) {
+    let win = (((2.0 * dpi / sep.lpi).round() as usize) | 1).max(3);
+    // design lightness (OKLab L)
+    let l: Vec<f32> = (0..w * h).into_par_iter().map(|q| if alpha[q] > 0.0 { oklab([p.rgb[q * 3], p.rgb[q * 3 + 1], p.rgb[q * 3 + 2]].map(lin))[0] } else { 0.0 }).collect();
+    cov.par_iter_mut().enumerate().for_each(|(f, c)| {
+        let Some(cap) = cap_of(f) else { return };
+        let cap = (cap * 255.0).round() as u8;
+        // "near solid": above the cap the holes between the dots are too small to print
+        // and get filled anyway (clean_bits), so these print as a flat patch too
+        if !c.iter().any(|&v| v > cap) {
+            return;
+        }
+        // the variation is judged over the (nearly) full pixels only: the soft edge of a
+        // flat letter (anti-aliasing, between cap and full) is not a gradient
+        let solid: Vec<f32> = c.iter().map(|&v| if v >= 250 { 1.0 } else { 0.0 }).collect();
+        let sl: Vec<f32> = solid.iter().zip(&l).map(|(s, l)| s * l).collect();
+        let sl2: Vec<f32> = solid.iter().zip(&l).map(|(s, l)| s * l * l).collect();
+        let n = crate::filters::uniform_filter(&solid, w, h, win);
+        let m1 = crate::filters::uniform_filter(&sl, w, h, win);
+        let m2 = crate::filters::uniform_filter(&sl2, w, h, win);
+        for q in 0..w * h {
+            if c[q] <= cap || flat.is_some_and(|fm| fm[q]) {
+                continue;
+            }
+            if n[q] < 1e-6 {
+                // no full pixel near: a lone near-full spot inside a gradient
+                c[q] = cap;
+                continue;
+            }
+            let k = n[q];
+            let (e1, e2) = (m1[q] / k, m2[q] / k);
+            // standard deviation of the design lightness over this solid area: about
+            // 1 dE = a gradient, below = a flat colour
+            if (e2 - e1 * e1).max(0.0).sqrt() > 0.01 {
+                c[q] = cap;
+            }
+        }
+    });
 }
 
 /// ink islands and holes smaller than the printable minimum (0.15 mm) removed / filled

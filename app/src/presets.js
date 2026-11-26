@@ -150,18 +150,21 @@ export const DEFAULTS = {
   sepBoost: 0,
   sepSaver: 0, // % : "hemat tinta": less underbase / ink where it changes the colour only a little
   sepWhiteAngle: null, // white films (underbase, highlight) on their own angle; null = the colour angle
+  sepMaxDot: 100, // % : white films in gradients at most this (no flat white patches); 100 = off
+  sepStrongInks: false, // dark shirts: strong automatic inks only (no pastel / cream ink)
   sepMargin: 12,
 }
 
 /** ready-made separation setups (Sablon). 'pro': learnt from hand-made film separations
  *  of band shirts (CorelDRAW): 35 LPI, colours dot on dot at 22.5 deg, the white films on
  *  their own screen 15 deg away (no moire, robust to a shifted white screen), a thinner
- *  base and highlight, lettering / logos solid (block film) */
+ *  base and highlight, at most 85 % white in gradients (smooth light tones keep their
+ *  dots), strong inks only (no cream ink), round dots, lettering / logos solid */
 export const SEP_PRESETS = [
-  { id: 'pro', name: 'Film PRO (35 LPI, putih beda sudut, hemat tinta)', en: 'PRO films (35 LPI, white on its own angle, ink saver)',
-    set: { sepMethod: 'simulasi', sepSet: 'auto', sepColors: 6, sepInks: [], sepBaseAfter: 0, sepBase: 'auto', sepHighlight: true, sepLpi: 35, sepAngle: 22.5, sepWhiteAngle: 7.5, sepSaver: 50, sepShape: 'elips', sepDots: 'satu-sudut', sepChoke: 0.1, protectText: true } },
+  { id: 'pro', name: 'Film PRO (35 LPI, gradasi halus, putih beda sudut, hemat tinta)', en: 'PRO films (35 LPI, smooth gradients, white on its own angle, ink saver)',
+    set: { sepMethod: 'simulasi', sepSet: 'auto', sepColors: 6, sepInks: [], sepBaseAfter: 0, sepBase: 'auto', sepHighlight: true, sepLpi: 35, sepAngle: 22.5, sepWhiteAngle: 7.5, sepSaver: 50, sepMaxDot: 85, sepStrongInks: true, sepShape: 'bulat', sepDots: 'satu-sudut', sepChoke: 0.1, protectText: true } },
   { id: 'standar', name: 'Standar StudioZea (55 LPI)', en: 'StudioZea standard (55 LPI)',
-    set: { sepMethod: 'simulasi', sepSet: 'auto', sepColors: 6, sepInks: [], sepBaseAfter: 0, sepBase: 'auto', sepHighlight: true, sepLpi: 55, sepAngle: 25, sepWhiteAngle: null, sepSaver: 0, sepShape: 'elips', sepDots: 'satu-sudut', sepChoke: 0.1 } },
+    set: { sepMethod: 'simulasi', sepSet: 'auto', sepColors: 6, sepInks: [], sepBaseAfter: 0, sepBase: 'auto', sepHighlight: true, sepLpi: 55, sepAngle: 25, sepWhiteAngle: null, sepSaver: 0, sepMaxDot: 100, sepStrongInks: false, sepShape: 'elips', sepDots: 'satu-sudut', sepChoke: 0.1 } },
 ]
 
 /** AI smoothing choice -> Real-ESRGAN denoise strength (1 = smooth, 0 = keep noise) */
@@ -340,6 +343,8 @@ export function toSep(s) {
     drop_below: num(s.sepDrop, 0.3, 0, 10),
     boost: num(s.sepBoost, 0, 0, 50) / 100,
     ink_saver: num(s.sepSaver, 0, 0, 100) / 100,
+    max_dot: num(s.sepMaxDot, 100, 50, 100) / 100,
+    strong_inks: !!s.sepStrongInks,
     white_angle: s.sepWhiteAngle == null || !Number.isFinite(Number(s.sepWhiteAngle)) ? null : Math.min(360, Math.max(-360, Number(s.sepWhiteAngle))),
   }
 }
