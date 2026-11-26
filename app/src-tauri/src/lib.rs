@@ -1416,8 +1416,10 @@ fn ai_cancel() {
 // ---------------------------------------------------------------- sablon (screen printing)
 use studiozea_engine::sablon;
 
-/// largest print separated at once (all films and the simulated print stay in memory)
-const MAX_SEP_PX: usize = 60_000_000;
+/// largest print separated at once (all films and the simulated print stay in memory).
+/// The separation peaks at about 48 bytes per pixel, so 125 Mpx is about 6 GB: e.g.
+/// 40 x 53 cm at 600 dpi (118 Mpx) or 60 x 80 cm at 400 dpi (117 Mpx)
+const MAX_SEP_PX: usize = 125_000_000;
 /// one separation at a time
 static SEP_LOCK: Mutex<()> = Mutex::new(());
 

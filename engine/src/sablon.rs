@@ -1512,43 +1512,71 @@ fn index_cov(p: &Prepared, alpha: &[f32], m: &Model, k: usize, cov: &mut [Vec<u8
 /// lettering (`flat`) is left alone; `cap_of(film)` = the cap, None = not capped.
 #[allow(clippy::too_many_arguments)]
 fn cap_gradients(cov: &mut [Vec<u8>], p: &Prepared, alpha: &[f32], flat: Option<&[bool]>, w: usize, h: usize, dpi: f64, sep: &SepSettings, cap_of: impl Fn(usize) -> Option<f32> + Sync) {
-    let win = (((2.0 * dpi / sep.lpi).round() as usize) | 1).max(3);
-    // design lightness (OKLab L)
-    let l: Vec<f32> = (0..w * h).into_par_iter().map(|q| if alpha[q] > 0.0 { oklab([p.rgb[q * 3], p.rgb[q * 3 + 1], p.rgb[q * 3 + 2]].map(lin))[0] } else { 0.0 }).collect();
-    cov.par_iter_mut().enumerate().for_each(|(f, c)| {
-        let Some(cap) = cap_of(f) else { return };
+    // statistics per block of about one halftone cell; a pixel is judged over the 3 x 3
+    // blocks around it (about two cells). Memory: a few floats per block, not per pixel
+    // (a print at 600 dpi has tens of millions of pixels)
+    let bs = ((dpi / sep.lpi).round() as usize).max(2);
+    let (bw, bh) = (w.div_ceil(bs), h.div_ceil(bs));
+    let lum = |q: usize| oklab([p.rgb[q * 3], p.rgb[q * 3 + 1], p.rgb[q * 3 + 2]].map(lin))[0];
+    for (f, c) in cov.iter_mut().enumerate() {
+        let Some(cap) = cap_of(f) else { continue };
         let cap = (cap * 255.0).round() as u8;
-        // "near solid": above the cap the holes between the dots are too small to print
-        // and get filled anyway (clean_bits), so these print as a flat patch too
-        if !c.iter().any(|&v| v > cap) {
-            return;
+        if !c.par_iter().any(|&v| v > cap) {
+            continue;
         }
-        // the variation is judged over the (nearly) full pixels only: the soft edge of a
-        // flat letter (anti-aliasing, between cap and full) is not a gradient
-        let solid: Vec<f32> = c.iter().map(|&v| if v >= 250 { 1.0 } else { 0.0 }).collect();
-        let sl: Vec<f32> = solid.iter().zip(&l).map(|(s, l)| s * l).collect();
-        let sl2: Vec<f32> = solid.iter().zip(&l).map(|(s, l)| s * l * l).collect();
-        let n = crate::filters::uniform_filter(&solid, w, h, win);
-        let m1 = crate::filters::uniform_filter(&sl, w, h, win);
-        let m2 = crate::filters::uniform_filter(&sl2, w, h, win);
-        for q in 0..w * h {
-            if c[q] <= cap || flat.is_some_and(|fm| fm[q]) {
-                continue;
+        // per block: number, sum and sum of squares of the design lightness over the
+        // (nearly) full pixels of this film; the soft edge of a flat letter (between the
+        // cap and full) is not a gradient
+        let stats: Vec<[f32; 3]> = (0..bw * bh)
+            .into_par_iter()
+            .map(|b| {
+                let (bx, by) = (b % bw, b / bw);
+                let mut acc = [0f32; 3];
+                for y in by * bs..((by + 1) * bs).min(h) {
+                    for x in bx * bs..((bx + 1) * bs).min(w) {
+                        let q = y * w + x;
+                        if c[q] >= 250 && alpha[q] > 0.0 {
+                            let l = lum(q);
+                            acc[0] += 1.0;
+                            acc[1] += l;
+                            acc[2] += l * l;
+                        }
+                    }
+                }
+                acc
+            })
+            .collect();
+        c.par_chunks_mut(w).enumerate().for_each(|(y, row)| {
+            let by = y / bs;
+            for (x, v) in row.iter_mut().enumerate() {
+                let q = y * w + x;
+                if *v <= cap || flat.is_some_and(|fm| fm[q]) {
+                    continue;
+                }
+                let bx = x / bs;
+                let mut acc = [0f32; 3];
+                for yy in by.saturating_sub(1)..(by + 2).min(bh) {
+                    for xx in bx.saturating_sub(1)..(bx + 2).min(bw) {
+                        let s = stats[yy * bw + xx];
+                        acc[0] += s[0];
+                        acc[1] += s[1];
+                        acc[2] += s[2];
+                    }
+                }
+                if acc[0] < 0.5 {
+                    // no full pixel near: a lone near-full spot inside a gradient
+                    *v = cap;
+                    continue;
+                }
+                let (e1, e2) = (acc[1] / acc[0], acc[2] / acc[0]);
+                // standard deviation of the design lightness: about 1 dE = a gradient,
+                // below = a flat colour
+                if (e2 - e1 * e1).max(0.0).sqrt() > 0.01 {
+                    *v = cap;
+                }
             }
-            if n[q] < 1e-6 {
-                // no full pixel near: a lone near-full spot inside a gradient
-                c[q] = cap;
-                continue;
-            }
-            let k = n[q];
-            let (e1, e2) = (m1[q] / k, m2[q] / k);
-            // standard deviation of the design lightness over this solid area: about
-            // 1 dE = a gradient, below = a flat colour
-            if (e2 - e1 * e1).max(0.0).sqrt() > 0.01 {
-                c[q] = cap;
-            }
-        }
-    });
+        });
+    }
 }
 
 /// ink islands and holes smaller than the printable minimum (0.15 mm) removed / filled
