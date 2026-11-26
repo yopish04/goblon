@@ -77,6 +77,8 @@ button, input, select { font: inherit; color: inherit; }
 .topbar { display: flex; align-items: center; gap: 4px; height: 44px; padding: 0 10px; background: var(--bar); border-bottom: 1px solid var(--line); position: relative; z-index: 20; }
 .logo { font-size: 14px; font-weight: 700; margin-right: 6px; letter-spacing: .2px; background: none; border: 0; padding: 4px 6px; border-radius: 6px; color: var(--text); cursor: pointer; font-family: inherit; }
 .logo:hover { background: var(--hover); }
+.logo { display: inline-flex; align-items: center; gap: 7px; }
+.logo-mark { width: 20px; height: 20px; display: block; }
 .modeswitch { margin-right: 8px; }
 .filmpick { max-width: 220px; }
 /* start page: DTF or sablon */

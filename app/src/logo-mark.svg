@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d2126"/><stop offset="1" stop-color="#0d0f12"/></linearGradient>
+<clipPath id="tile"><rect x="48" y="48" width="928" height="928" rx="200"/></clipPath>
+<linearGradient id="rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity="0.16"/><stop offset="1" stop-color="#ffffff" stop-opacity="0.02"/></linearGradient>
+<filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur in="SourceAlpha" stdDeviation="14"/><feOffset dy="10"/><feComponentTransfer><feFuncA type="linear" slope="0.55"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<linearGradient id="zg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#b7ff72"/><stop offset="1" stop-color="#36d6ff"/></linearGradient></defs>
+<rect x="48" y="48" width="928" height="928" rx="200" fill="url(#bg)"/>
+<polygon points="268,236 756,236 756,380 486,636 756,636 756,788 268,788 268,644 538,388 268,388" fill="url(#zg)"/>
+<rect x="51" y="51" width="922" height="922" rx="197" fill="none" stroke="url(#rim)" stroke-width="6"/>
+</svg>

@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { open, save } from '@tauri-apps/plugin-dialog'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
+import logoMark from './logo-mark.svg'
 import { AI_DENOISE, AI_MAX_PX, LOW_DPI, aiScaleFor, ANGLES, DEFAULTS, IMAGE_KEYS, isTextMode, textFineLpi, shirtFor, DPIS, SIZES, LOOK_KEYS, PROJECT_KEYS, mergeSettings, pickSettings, LPI_MAX, LPI_MIN, PATTERNS, PRESETS, SHAPES, newTexture, optLabel, sizeLabel, shirtCss, toJob, toSep, inkName, rgbHex, hexRgb, okInks, shirtTone, inkSets } from './presets.js'
 import CanvasViewer from './CanvasViewer.jsx'
 import { Help, Menu, NumField, Row, Seg, Slider, fmt, unpack } from './ui.jsx'
@@ -901,7 +902,7 @@ export default function App() {
   // ---------------------------------------------------------------- layout
   const topbar = (
     <header className="topbar">
-      <button type="button" className="logo" title={L('Beranda: pilih DTF atau sablon', 'Home: choose DTF or screen printing')} onClick={() => setHome(true)}>StudioZea</button>
+      <button type="button" className="logo" title={L('Beranda: pilih DTF atau sablon', 'Home: choose DTF or screen printing')} onClick={() => setHome(true)}><img src={logoMark} alt="" className="logo-mark" />StudioZea</button>
       <div className="modeswitch" title={L('Jenis cetak. Pindah kapan saja: gambar, crop dan coretan tetap.', 'Print type. Switch any time: image, crop and strokes stay.')}>
         <Seg value={s.printMode} onChange={chooseMode} options={[['dtf', 'DTF'], ['sablon', L('Sablon', 'Screen print')]]} />
       </div>
