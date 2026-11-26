@@ -157,12 +157,11 @@ export const DEFAULTS = {
 
 /** ready-made separation setups (Sablon). 'pro': learnt from hand-made film separations
  *  of band shirts (CorelDRAW): 35 LPI, colours dot on dot at 22.5 deg, the white films on
- *  their own screen 15 deg away (no moire, robust to a shifted white screen), a thinner
- *  base and highlight, at most 85 % white in gradients (smooth light tones keep their
+ *  their own screen 15 deg away (no moire, robust to a shifted white screen), at most 85 % white in gradients (smooth light tones keep their
  *  dots), strong inks only (no cream ink), round dots, lettering / logos solid */
 export const SEP_PRESETS = [
-  { id: 'pro', name: 'Film PRO (35 LPI, gradasi halus, putih beda sudut, hemat tinta)', en: 'PRO films (35 LPI, smooth gradients, white on its own angle, ink saver)',
-    set: { sepMethod: 'simulasi', sepSet: 'auto', sepColors: 6, sepInks: [], sepBaseAfter: 0, sepBase: 'auto', sepHighlight: true, sepLpi: 35, sepAngle: 22.5, sepWhiteAngle: 7.5, sepSaver: 50, sepMaxDot: 85, sepStrongInks: true, sepShape: 'bulat', sepDots: 'satu-sudut', sepChoke: 0.1, protectText: true } },
+  { id: 'pro', name: 'Film PRO (35 LPI, gradasi halus, putih beda sudut)', en: 'PRO films (35 LPI, smooth gradients, white on its own angle)',
+    set: { sepMethod: 'simulasi', sepSet: 'auto', sepColors: 6, sepInks: [], sepBaseAfter: 0, sepBase: 'auto', sepHighlight: true, sepLpi: 35, sepAngle: 22.5, sepWhiteAngle: 7.5, sepSaver: 0, sepMaxDot: 85, sepStrongInks: true, sepShape: 'bulat', sepDots: 'satu-sudut', sepChoke: 0.1, protectText: true } },
   { id: 'standar', name: 'Standar StudioZea (55 LPI)', en: 'StudioZea standard (55 LPI)',
     set: { sepMethod: 'simulasi', sepSet: 'auto', sepColors: 6, sepInks: [], sepBaseAfter: 0, sepBase: 'auto', sepHighlight: true, sepLpi: 55, sepAngle: 25, sepWhiteAngle: null, sepSaver: 0, sepMaxDot: 100, sepStrongInks: false, sepShape: 'elips', sepDots: 'satu-sudut', sepChoke: 0.1 } },
 ]
