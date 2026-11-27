@@ -412,3 +412,36 @@ fn muted_design_keeps_its_accent_colour() {
         assert!(rgb.iter().any(|c| c[0] as i32 - c[1] as i32 > 50), "a red ink for the accent: {rgb:?}");
     }
 }
+
+/// a fixed ink set (the basic saturated inks) on dark, muted colours: the solver used
+/// to mix them from several tiny dots that are below the printable size and get
+/// cleaned from the films, so the print came out much darker than planned. It now
+/// only counts coverages that print
+#[test]
+fn fixed_inks_on_muted_colours_use_printable_dots() {
+    let (w, h) = (240, 200);
+    let mut rgb = vec![0f32; w * h * 3];
+    let alpha = vec![1f32; w * h];
+    for y in 0..h {
+        for x in 0..w {
+            let q = y * w + x;
+            // dark muted greens, grey-browns and a pale skin tone
+            let c = match (x * 4 / w, y * 2 / h) {
+                (0, 0) => [0.20, 0.27, 0.24],
+                (1, 0) => [0.30, 0.36, 0.30],
+                (2, 0) => [0.33, 0.27, 0.24],
+                (3, 0) => [0.45, 0.50, 0.44],
+                (0, 1) => [0.62, 0.66, 0.58],
+                (1, 1) => [0.80, 0.72, 0.70],
+                (2, 1) => [0.40, 0.24, 0.24],
+                _ => [0.25, 0.30, 0.33],
+            };
+            rgb[q * 3..q * 3 + 3].copy_from_slice(&c);
+        }
+    }
+    let p = Prepared { w, h, pre_w: w, src_box: [0, 0, w, h], rgb, alpha, bg: None, bg_used: None, solid: None };
+    let sep = SepSettings { ink_set: InkSet::Dasar, lpi: 35.0, angle: 22.5, ..Default::default() };
+    let r = separate(&p, &settings(Shirt::Hitam), &sep);
+    println!("dE {:.2}", r.delta_e);
+    assert!(r.delta_e < 1.9, "dE {} (before the fix 2.4)", r.delta_e);
+}

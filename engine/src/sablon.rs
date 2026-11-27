@@ -435,6 +435,9 @@ struct Model {
     white_free: bool,
     /// index of the highlight white ink, if any
     hl: Option<usize>,
+    /// smallest coverage that prints (smaller dots are cleaned from the film): the
+    /// model counts less as nothing, so the solver picks mixes that really print
+    cmin: f32,
 }
 
 impl Model {
@@ -450,6 +453,7 @@ impl Model {
             ink_cost: 2e-5,
             white_free: false,
             hl: None,
+            cmin: 0.0,
         }
     }
 
@@ -509,15 +513,20 @@ impl Model {
     fn mix_dot_with(&self, u: f32, fixed: Option<bool>, c: &[f32], skip: Option<usize>) -> [f32; 3] {
         let mut bp = [0f32; MAX_INKS + 3];
         let mut nb = 0;
+        let u = self.eff(u);
+        let mut ce = [0f32; MAX_INKS];
+        for (o, &v) in ce.iter_mut().zip(c) {
+            *o = self.eff(v);
+        }
+        let c = &ce[..c.len()];
         if self.base.is_some() && fixed.is_none() {
-            bp[nb] = u.clamp(0.0, 1.0);
+            bp[nb] = u;
             nb += 1;
         }
         for (k, &v) in c.iter().enumerate() {
             if Some(k) == skip {
                 continue;
             }
-            let v = v.clamp(0.0, 1.0);
             bp[nb] = if self.inv[k] { 1.0 - v } else { v };
             nb += 1;
         }
@@ -544,6 +553,17 @@ impl Model {
             a = b;
         }
         acc
+    }
+
+    /// coverage as it prints: below the smallest printable dot nothing
+    #[inline]
+    fn eff(&self, v: f32) -> f32 {
+        let v = v.clamp(0.0, 1.0);
+        if v < self.cmin {
+            0.0
+        } else {
+            v
+        }
     }
 
     /// the average printed colour the solver aims at: `mix_dot` for one screen,
@@ -1197,7 +1217,7 @@ pub fn separate(p: &Prepared, s: &Settings, sep: &SepSettings) -> Separation {
     let mut keep: Vec<usize> = (0..inks.len()).collect();
     let (m, mut cov) = loop {
         let used: Vec<Ink> = keep.iter().map(|&i| inks[i]).collect();
-        let m = model_of(shirt, base, &used, keep.iter().filter(|&&i| i < base_after).count(), sep);
+        let m = model_of(shirt, base, &used, keep.iter().filter(|&&i| i < base_after).count(), sep, dpi);
         let cov = coverages(p, &alpha, solid, &m, &used, sep, k);
         if sep.drop_below > 0.0 && keep.len() == inks.len() && keep.len() > 1 {
             // dots smaller than the printable minimum are cleaned from the film anyway
@@ -1263,7 +1283,8 @@ pub fn separate(p: &Prepared, s: &Settings, sep: &SepSettings) -> Separation {
                 Method::Simulasi => {
                     // an inverted film prints where the threshold is above 1 - coverage
                     let t: Vec<f32> = c.iter().map(|&v| if inverted { 1.0 - v as f32 / 255.0 } else { v as f32 / 255.0 }).collect();
-                    let mut b = channel_at(&t, w, h, 0, 0, dpi, sep.lpi, angle, sep.shape, choose_grid(dpi, sep.lpi, angle), false);
+                    let grid = choose_grid(dpi, sep.lpi, angle);
+                    let mut b = channel_at(&t, w, h, 0, 0, dpi, sep.lpi, angle, sep.shape, grid, false);
                     if inverted {
                         b.par_iter_mut().for_each(|o| *o = !*o);
                     }
@@ -1293,14 +1314,21 @@ pub fn separate(p: &Prepared, s: &Settings, sep: &SepSettings) -> Separation {
         })
         .collect();
     let preview = simulate(&m, &films, w, h);
+
     let delta_e = delta_e(p, &alpha, shirt, &preview, w, h, ((2.0 * dpi / sep.lpi).round() as usize).max(2));
     Separation { w, h, inks, base_after, films, preview, delta_e }
 }
 
 /// the print model for the inks `used` (print order, `base_after` of them before the
 /// base) and the separation's method and dot style
-fn model_of(shirt: [f32; 3], base: Option<f32>, used: &[Ink], base_after: usize, sep: &SepSettings) -> Model {
+fn model_of(shirt: [f32; 3], base: Option<f32>, used: &[Ink], base_after: usize, sep: &SepSettings, dpi: f64) -> Model {
     let mut m = Model::new(shirt, base, used, base_after);
+    if sep.method == Method::Simulasi {
+        // dots below the printable minimum area are cleaned from the films: the solver
+        // counts such a coverage as nothing, so it picks mixes whose dots really print
+        // (a dark muted colour made of three tiny dots printed as almost nothing)
+        m.cmin = (minarea_px(dpi) as f64 / (dpi / sep.lpi).powi(2)).min(0.5) as f32;
+    }
     m.boost = sep.boost;
     // hemat tinta: up to ~0.8 dE (OKLab x 100) of colour traded for a full layer of ink
     m.ink_cost = 2e-5 + sep.ink_saver * 2.4e-4;
