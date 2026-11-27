@@ -577,14 +577,14 @@ impl Model {
             // the average
             let stack = |on: bool| self.mix_dot_with(u, Some(on), c, self.hl);
             let (a, b) = if self.base.is_some() { (stack(true), stack(false)) } else { (stack(false), stack(false)) };
-            let uu = if self.base.is_some() { u.clamp(0.0, 1.0) } else { 0.0 };
+            let uu = if self.base.is_some() { self.eff(u) } else { 0.0 };
             let mut col = [0f32; 3];
             for ch in 0..3 {
                 col[ch] = uu * a[ch] + (1.0 - uu) * b[ch];
             }
             if let Some(h) = self.hl {
                 let (ink, op) = self.inks[h];
-                Model::layer(&mut col, ink, c[h].clamp(0.0, 1.0), op);
+                Model::layer(&mut col, ink, self.eff(c[h]), op);
             }
             col
         } else if self.dot_on_dot {
@@ -626,6 +626,9 @@ const NEAR_SHIRT: f32 = 0.12;
 /// design colours at least this saturated (OKLab chroma) are accent candidates
 const ACCENT_CHROMA: f32 = 0.06;
 
+/// shirts darker than this (OKLab L: black, charcoal, very dark navy) are "the black"
+const BLACK_SHIRT_L: f32 = 0.35;
+
 /// on a dark shirt no automatic ink this close to the shirt colour (OKLab)
 const NEAR_DARK_INK: f32 = 0.24;
 
@@ -658,6 +661,10 @@ pub fn auto_inks_with(p: &Prepared, shirt: [f32; 3], n: usize, highlight: bool, 
     let use_white = dark && highlight && n >= 2 && s.iter().filter(|c| whiteish(c)).count() * 200 > s.len();
     if use_white {
         s.retain(|c| !whiteish(c));
+        if s.is_empty() {
+            // only white in the design (a white logo): the highlight white is the ink
+            return vec![Ink::new([255, 255, 255], 0.85)];
+        }
     }
     let k = if use_white { n - 1 } else { n }.min(s.len());
     // candidates: many clusters (purified), then the k inks that reach the design
@@ -678,10 +685,11 @@ pub fn auto_inks_with(p: &Prepared, shirt: [f32; 3], n: usize, highlight: bool, 
             }
         }
     }
-    // on a dark shirt the shirt itself is the black: a near-black ink only darkens
-    // what the base made light, a screen and ink for almost nothing (hand separations
-    // leave the base out there instead)
-    if dark {
+    // on a black / very dark shirt the shirt itself is the black: a near-black ink only
+    // darkens what the base made light, a screen and ink for almost nothing (hand
+    // separations leave the base out there instead). On a coloured shirt (red, grey,
+    // a mid blue) black lettering needs its black ink, so the rule does not apply
+    if sh[0] < BLACK_SHIRT_L {
         let keep: Vec<([f32; 3], f32)> = cand
             .iter()
             .copied()

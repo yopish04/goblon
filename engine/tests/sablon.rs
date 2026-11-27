@@ -445,3 +445,38 @@ fn fixed_inks_on_muted_colours_use_printable_dots() {
     println!("dE {:.2}", r.delta_e);
     assert!(r.delta_e < 1.9, "dE {} (before the fix 2.4)", r.delta_e);
 }
+
+/// audit: black lettering on a red (coloured, not black) shirt still gets a black ink;
+/// the "no near-black ink" rule is for black / very dark shirts only
+#[test]
+fn coloured_shirt_keeps_a_black_ink() {
+    let (w, h) = (200, 160);
+    let mut rgb = vec![0f32; w * h * 3];
+    let mut alpha = vec![0f32; w * h];
+    for y in 10..h - 10 {
+        for x in 10..w - 10 {
+            let q = y * w + x;
+            alpha[q] = 1.0;
+            let c = if y < 60 { [0.05, 0.05, 0.05] } else if x < 100 { [1.0, 0.85, 0.1] } else { [1.0, 1.0, 1.0] };
+            rgb[q * 3..q * 3 + 3].copy_from_slice(&c);
+        }
+    }
+    let p = Prepared { w, h, pre_w: w, src_box: [0, 0, w, h], rgb, alpha, bg: None, bg_used: None, solid: None };
+    let red_shirt = [0.75, 0.1, 0.12];
+    let inks = auto_inks(&p, red_shirt, 4, true);
+    let rgb: Vec<[u8; 3]> = inks.iter().map(|i| i.rgb).collect();
+    println!("{rgb:?}");
+    assert!(rgb.iter().any(|c| c.iter().all(|&v| v < 60)), "black ink on a red shirt: {rgb:?}");
+}
+
+/// audit: a design that is only white on a black shirt (white logo) must not crash the
+/// automatic ink choice (it used to divide by zero)
+#[test]
+fn all_white_design_on_black_does_not_crash() {
+    let (w, h) = (120, 80);
+    let p = Prepared { w, h, pre_w: w, src_box: [0, 0, w, h], rgb: vec![1.0; w * h * 3], alpha: vec![1.0; w * h], bg: None, bg_used: None, solid: None };
+    let inks = auto_inks(&p, [0.0; 3], 4, true);
+    assert!(inks.iter().all(|i| i.rgb == [255, 255, 255]) && !inks.is_empty(), "{:?}", inks.iter().map(|i| i.rgb).collect::<Vec<_>>());
+    let r = separate(&p, &settings(Shirt::Hitam), &SepSettings { colors: 4, ..Default::default() });
+    assert!(!r.films.is_empty());
+}

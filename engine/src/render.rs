@@ -490,6 +490,8 @@ fn render_true_dots(c: &[f32], a: &[f32], w: usize, h: usize, ox: usize, oy: usi
         *cv = if dist < s.clip {
             0.0
         } else if td.solid < 1.0 && light >= td.solid {
+            // solid: the design colour itself (the lift is for smaller dots only)
+            col.copy_from_slice(&[c[p * 3].clamp(0.0, 1.0), c[p * 3 + 1].clamp(0.0, 1.0), c[p * 3 + 2].clamp(0.0, 1.0)]);
             1.0
         } else {
             (td.size * there * k).min(1.0)

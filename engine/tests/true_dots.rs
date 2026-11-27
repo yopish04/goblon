@@ -166,3 +166,20 @@ fn colour_lift_gives_bright_dots_and_keeps_the_average() {
     let o0 = render(&c, &a, w, h, &settings(Some(TrueDots { lift: 0.0, size: 1.0, solid: 1.0 })));
     assert!(o0.chunks(4).filter(|p| p[3] == 255).all(|p| p[..3] == [190, 63, 51]));
 }
+
+/// audit: with colour lift, an area that prints solid ("Padat mulai") keeps the design
+/// colour; the lifted colour belongs to the smaller dots only
+#[test]
+fn solid_areas_keep_the_design_colour_with_lift() {
+    let (w, h) = (120, 120);
+    let grey = [0.6f32, 0.6, 0.6];
+    let c: Vec<f32> = (0..w * h).flat_map(|_| grey).collect();
+    let a = vec![1f32; w * h];
+    // lift 100 %, solid from 50 %: the mid grey is solid
+    let s = settings(Some(TrueDots { lift: 1.0, size: 1.0, solid: 0.5 }));
+    let o = render(&c, &a, w, h, &s);
+    let want = grey.map(|v| (v * 255.0f32).round() as u8);
+    let solid = o.chunks(4).filter(|p| p[3] == 255).count();
+    assert!(solid > w * h * 9 / 10, "solid {solid}");
+    assert!(o.chunks(4).filter(|p| p[3] == 255).all(|p| p[..3] == want), "solid grey must stay grey: {:?}", &o[..4]);
+}

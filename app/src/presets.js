@@ -163,7 +163,7 @@ export const SEP_PRESETS = [
   { id: 'pro', name: 'Film PRO (35 LPI, gradasi halus, putih beda sudut)', en: 'PRO films (35 LPI, smooth gradients, white on its own angle)',
     set: { sepMethod: 'simulasi', sepSet: 'auto', sepColors: 6, sepInks: [], sepBaseAfter: 0, sepBase: 'auto', sepHighlight: true, sepLpi: 35, sepAngle: 22.5, sepWhiteAngle: 7.5, sepSaver: 0, sepMaxDot: 85, sepStrongInks: true, sepShape: 'bulat', sepDots: 'satu-sudut', sepChoke: 0.1, protectText: true } },
   { id: 'standar', name: 'Standar StudioZea (55 LPI)', en: 'StudioZea standard (55 LPI)',
-    set: { sepMethod: 'simulasi', sepSet: 'auto', sepColors: 6, sepInks: [], sepBaseAfter: 0, sepBase: 'auto', sepHighlight: true, sepLpi: 55, sepAngle: 25, sepWhiteAngle: null, sepSaver: 0, sepMaxDot: 100, sepStrongInks: false, sepShape: 'elips', sepDots: 'satu-sudut', sepChoke: 0.1 } },
+    set: { sepMethod: 'simulasi', sepSet: 'auto', sepColors: 6, sepInks: [], sepBaseAfter: 0, sepBase: 'auto', sepHighlight: true, sepLpi: 55, sepAngle: 25, sepWhiteAngle: null, sepSaver: 0, sepMaxDot: 100, sepStrongInks: false, sepShape: 'elips', sepDots: 'satu-sudut', sepChoke: 0.1, protectText: false } },
 ]
 
 /** AI smoothing choice -> Real-ESRGAN denoise strength (1 = smooth, 0 = keep noise) */

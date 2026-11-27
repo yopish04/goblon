@@ -1497,7 +1497,7 @@ export default function App() {
             return (
               <div className="ink" key="base">
                 <span className="sw" style={{ background: '#ffffff' }} />
-                <span className="nm">{no} {L('Underbase putih', 'White underbase')}<small>{f ? `${Math.round(f.coverage * 100)} %` : '\u00a0'}</small></span>
+                <span className="nm">{no} {L('Underbase putih', 'White underbase')}<small>{f ? `${Math.round(f.coverage * 100)} %${screen}` : '\u00a0'}</small></span>
                 <span className="slot">{up}</span><span className="slot">{down}</span><span className="slot" />
               </div>
             )
@@ -1598,7 +1598,7 @@ export default function App() {
             <NumField className="short" value={s.sepAngle} min={-90} max={90} step={0.5} digits={1} onCommit={(v) => set({ sepAngle: v })} />
             <span className="small">°</span>
           </Row>
-          <Row label={L('Sudut putih', 'White angle')} hint={L('Film putih (underbase dan highlight) di sudut sendiri, mis. 15° dari warna (22,5° → 7,5°), seperti film pecah warna buatan tangan: tidak moire dengan warna, dan bila screen putih sedikit bergeser saat cetak, warnanya tetap rapi (diuji: geser 0,25 mm, selisih warna naik 0,4 saja, bukan 1,4). Sama = satu sudut dengan warna.', 'The white films (underbase and highlight) on their own angle, e.g. 15° from the colours (22.5° → 7.5°), like hand-made film separations: no moiré with the colours, and when the white screen shifts a little on press the colours stay clean (tested: a 0.25 mm shift raises the colour difference by 0.4, not 1.4). Same = one angle with the colours.')}>
+          {s.sepDots !== 'roset' && <Row label={L('Sudut putih', 'White angle')} hint={L('Film putih (underbase dan highlight) di sudut sendiri, mis. 15° dari warna (22,5° → 7,5°), seperti film pecah warna buatan tangan: tidak moire dengan warna, dan bila screen putih sedikit bergeser saat cetak, warnanya tetap rapi (diuji: geser 0,25 mm, selisih warna naik 0,4 saja, bukan 1,4). Sama = satu sudut dengan warna.', 'The white films (underbase and highlight) on their own angle, e.g. 15° from the colours (22.5° → 7.5°), like hand-made film separations: no moiré with the colours, and when the white screen shifts a little on press the colours stay clean (tested: a 0.25 mm shift raises the colour difference by 0.4, not 1.4). Same = one angle with the colours.')}>
             <Seg value={s.sepWhiteAngle == null ? 'sama' : 'beda'} onChange={(v) => set({ sepWhiteAngle: v === 'sama' ? null : Number(s.sepAngle) - 15 })} options={[['sama', L('Sama', 'Same')], ['beda', L('Sendiri', 'Own')]]} />
             {s.sepWhiteAngle != null && (
               <>
@@ -1606,7 +1606,7 @@ export default function App() {
                 <span className="small">°</span>
               </>
             )}
-          </Row>
+          </Row>}
           <Row label={L('Bentuk titik', 'Dot shape')}>
             <select value={s.sepShape} onChange={(e) => set({ sepShape: e.target.value })}>
               {SHAPES.filter((o) => ['elips', 'bulat', 'bulat-murni', 'kotak', 'berlian', 'garis'].includes(o[0])).map((o) => <option key={o[0]} value={o[0]}>{optLabel(o)}</option>)}
