@@ -396,3 +396,19 @@ fn max_white_dot_keeps_light_gradients_dotted() {
     assert!(b_on > 0.99, "flat white block stays solid: {b_on}");
     assert!(SepSettings { max_dot: 0.3, ..sep }.check().is_err());
 }
+
+/// a muted photo (dark grey-greens, pale green skin tones) with a small red accent
+/// (lips, little colour squares): the automatic inks include a red instead of
+/// averaging it into a grey-brown. Test data: 40000 pixel colours sampled from such a
+/// design and shuffled (only the colour distribution, not the picture)
+#[test]
+fn muted_design_keeps_its_accent_colour() {
+    let src = studiozea_engine::io::load(&std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/muted_photo_colours.png")).unwrap();
+    let p = Prepared { w: src.w, h: src.h, pre_w: src.w, src_box: [0, 0, src.w, src.h], rgb: src.rgb, alpha: vec![1.0; src.w * src.h], bg: None, bg_used: None, solid: None };
+    for strong in [false, true] {
+        let inks = studiozea_engine::sablon::auto_inks_with(&p, [0.0; 3], 6, true, strong);
+        let rgb: Vec<[u8; 3]> = inks.iter().map(|i| i.rgb).collect();
+        println!("strong {strong}: {rgb:?}");
+        assert!(rgb.iter().any(|c| c[0] as i32 - c[1] as i32 > 50), "a red ink for the accent: {rgb:?}");
+    }
+}

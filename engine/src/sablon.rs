@@ -603,6 +603,9 @@ impl Rng {
 /// design colours this close to the shirt colour (OKLab) need no ink: the shirt shows
 const NEAR_SHIRT: f32 = 0.12;
 
+/// design colours at least this saturated (OKLab chroma) are accent candidates
+const ACCENT_CHROMA: f32 = 0.06;
+
 /// on a dark shirt no automatic ink this close to the shirt colour (OKLab)
 const NEAR_DARK_INK: f32 = 0.24;
 
@@ -640,6 +643,21 @@ pub fn auto_inks_with(p: &Prepared, shirt: [f32; 3], n: usize, highlight: bool, 
     // candidates: many clusters (purified), then the k inks that reach the design
     // colours best (alone, mixed with the shirt / white, or two inks mixed)
     let mut cand = kmeans_inks(&s, (k * 4).clamp(k, 32));
+    // accent colours: the clusters above follow the bulk of a design, so a small but
+    // saturated part (red lips in a muted green photo, little colour squares) is
+    // averaged away into a grey-brown cluster. The saturated pixels are clustered on
+    // their own and added as candidates (with their real share) when the clusters
+    // have no saturated colour at all (a muted design); colourful designs keep theirs
+    let muted = cand.iter().all(|(c, _)| chroma(*c) < ACCENT_CHROMA);
+    let sat: Vec<[f32; 3]> = if muted { s.iter().copied().filter(|c| chroma(*c) >= ACCENT_CHROMA).collect() } else { Vec::new() };
+    if sat.len() * 200 >= s.len() && sat.len() >= 20 {
+        let share = sat.len() as f32 / s.len() as f32;
+        for (c, w) in kmeans_inks(&sat, (k * 2).clamp(2, 12)) {
+            if cand.iter().all(|(o, _)| dist2(*o, c) >= 0.04 * 0.04) {
+                cand.push((c, w * share));
+            }
+        }
+    }
     // on a dark shirt the shirt itself is the black: a near-black ink only darkens
     // what the base made light, a screen and ink for almost nothing (hand separations
     // leave the base out there instead)
