@@ -23,7 +23,10 @@ const STD_ROWS = [
   ['Biru Neon', '801 C', '#009ACE'], ['Emas (Gold)', '871 C', '#84754E'], ['Perak (Silver)', '877 C', '#8A8D8F'],
 ]
 export const STD_ID = 'std'
-export const STD = { id: STD_ID, name: 'Pantone sablon standar', en: 'Standard Pantone screen-print colours', inks: STD_ROWS.map(([n, c, h]) => ({ h, n, c })) }
+// colour families of the standard rows (the picker groups them)
+const STD_GROUPS = [[2, 'Putih & Hitam'], [7, 'Kuning & Orange'], [15, 'Merah & Pink'], [17, 'Ungu'], [25, 'Biru'], [31, 'Hijau'], [34, 'Coklat & Krem'], [37, 'Abu-abu'], [44, 'Neon'], [46, 'Metalik']]
+const stdGroup = (k) => STD_GROUPS.find(([end]) => k < end)[1]
+export const STD = { id: STD_ID, name: 'Pantone sablon standar', en: 'Standard Pantone screen-print colours', inks: STD_ROWS.map(([n, c, h], k) => ({ h, n, c, s: stdGroup(k) })) }
 
 /** 'metalik' | 'neon' | null: special inks are not chosen automatically (the preview
  * cannot show their shine / glow), only by hand */
@@ -57,6 +60,11 @@ export function inkTitle(ink, cat) {
 export function inkRef(ink, cat) {
   if (cat?.id === STD_ID) return ink.c && ink.c !== 'White' ? `Pantone ${ink.c}` : ''
   return ink.p && !/^(white|putih|black|hitam|[-—–\s]*)$/i.test(ink.p) ? `~Pantone ${ink.p}` : ''
+}
+/** a stored ink line split again: { title, ref } ("ANT Ink P-OP 4430 Red", "~Pantone 485 C") */
+export function splitLine(line) {
+  const m = /^(.*) \((~?Pantone [^)]*)\)$/.exec(line || '')
+  return m ? { title: m[1], ref: m[2] } : { title: line || '', ref: '' }
 }
 /** one line for films and the print order (ASCII only on the film itself) */
 export const inkLine = (ink, cat) => {

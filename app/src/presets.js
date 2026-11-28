@@ -373,7 +373,7 @@ export function inkSets(tone) {
   const dark = tone === 'gelap'
   return [
     ['auto', 'Otomatis dari desain', 'Automatic from the design'],
-    ['katalog', 'Dari katalog tinta (Pantone / merek)', 'From an ink catalogue (Pantone / brand)'],
+    ['katalog', 'Katalog tinta (Pantone / merek)', 'Ink catalogue (Pantone / brand)'],
     ['dasar', dark ? '6 warna dasar + abu' : '6 warna dasar + hitam', dark ? '6 basic colours + grey' : '6 basic colours + black'],
     ...(dark ? [['dasar-abu-dulu', '6 warna dasar, abu dicetak dulu', '6 basic colours, grey printed first']] : []),
     ['hemat', dark ? 'Hemat: kuning, merah, biru' : 'Hemat: kuning, merah, biru, hitam', dark ? 'Cheap: yellow, red, blue' : 'Cheap: yellow, red, blue, black'],
