@@ -135,6 +135,7 @@ export const DEFAULTS = {
   // the film border with registration marks
   sepMethod: 'simulasi',
   sepSet: 'auto',
+  sepKatalog: 'std', // with sepSet 'katalog': which ink catalogue ('std' = standard Pantone, 'x:<brand>' = imported)
   sepColors: 6,
   sepInks: [],
   sepBaseAfter: 0,
@@ -162,6 +163,12 @@ export const DEFAULTS = {
 export const SEP_PRESETS = [
   { id: 'pro', name: 'Film PRO (35 LPI, gradasi halus, putih beda sudut)', en: 'PRO films (35 LPI, smooth gradients, white on its own angle)',
     set: { sepMethod: 'simulasi', sepSet: 'auto', sepColors: 6, sepInks: [], sepBaseAfter: 0, sepBase: 'auto', sepHighlight: true, sepLpi: 35, sepAngle: 22.5, sepWhiteAngle: 7.5, sepSaver: 0, sepMaxDot: 85, sepStrongInks: true, sepShape: 'bulat', sepDots: 'satu-sudut', sepChoke: 0.1, protectText: true } },
+  // Mode 1: the PRO screen with inks from stock (the chosen catalogue), Mode 2: one
+  // catalogue ink per flat colour, solid, on a solid base, colours spread 1 px (trap)
+  { id: 'stok', name: 'Simulasi dari stok (tinta katalog, 35 LPI)', en: 'Simulated from stock (catalogue inks, 35 LPI)',
+    set: { sepMethod: 'simulasi', sepSet: 'katalog', sepColors: 6, sepInks: [], sepBaseAfter: 0, sepBase: 'auto', sepHighlight: true, sepLpi: 35, sepAngle: 22.5, sepWhiteAngle: 7.5, sepSaver: 0, sepMaxDot: 85, sepStrongInks: true, sepShape: 'bulat', sepDots: 'satu-sudut', sepChoke: 0.1, protectText: true } },
+  { id: 'spot-pantone', name: 'Spot Pantone (warna rata, tinta katalog)', en: 'Spot Pantone (flat colours, catalogue inks)',
+    set: { sepMethod: 'spot', sepSet: 'katalog', sepColors: 8, sepInks: [], sepBaseAfter: 0, sepBase: 'auto', sepHighlight: true, sepExpand: 1, sepChoke: 0.1, protectText: false } },
   { id: 'standar', name: 'Standar StudioZea (55 LPI)', en: 'StudioZea standard (55 LPI)',
     set: { sepMethod: 'simulasi', sepSet: 'auto', sepColors: 6, sepInks: [], sepBaseAfter: 0, sepBase: 'auto', sepHighlight: true, sepLpi: 55, sepAngle: 25, sepWhiteAngle: null, sepSaver: 0, sepMaxDot: 100, sepStrongInks: false, sepShape: 'elips', sepDots: 'satu-sudut', sepChoke: 0.1, protectText: false } },
 ]
@@ -274,7 +281,7 @@ const ENUMS = {
   textStyle: ['padat', 'halus'],
   printMode: ['dtf', 'sablon'],
   sepMethod: ['simulasi', 'index', 'spot'],
-  sepSet: ['auto', 'dasar', 'dasar-abu-dulu', 'hemat', 'gelap', 'saya'],
+  sepSet: ['auto', 'katalog', 'dasar', 'dasar-abu-dulu', 'hemat', 'gelap', 'saya'],
   sepDots: ['satu-sudut', 'roset', 'interlock'],
   sepBase: ['auto', 'ya', 'tidak'],
   sepShape: SHAPES.map(([v]) => v),
@@ -288,14 +295,16 @@ export const textFineLpi = (lpi, dpi) => Math.max(lpi, Math.min(Math.max(lpi * 2
 const okStroke = (s) => s && BRUSH_MODES.includes(s.mode) && Number.isFinite(s.r) && s.r >= 0.5 && s.r <= 5000 &&
   Array.isArray(s.pts) && s.pts.length > 0 && s.pts.every((p) => Array.isArray(p) && p.length === 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]))
 
-/** a valid ink list ([{rgb, opacity, boost?}], at most 12) */
+/** a valid ink list ([{rgb, opacity, boost?, name?}], at most 12; name = the catalogue ink) */
 export const okInks = (v) => Array.isArray(v) && v.length <= 12 && v.every((i) => i && Array.isArray(i.rgb) && i.rgb.length === 3 && i.rgb.every((c) => Number.isInteger(c) && c >= 0 && c <= 255) &&
-  Number.isFinite(i.opacity) && i.opacity >= 0.05 && i.opacity <= 1 && (i.boost === undefined || (Number.isFinite(i.boost) && i.boost >= 0 && i.boost <= 1)))
+  Number.isFinite(i.opacity) && i.opacity >= 0.05 && i.opacity <= 1 && (i.boost === undefined || (Number.isFinite(i.boost) && i.boost >= 0 && i.boost <= 1)) &&
+  (i.name === undefined || (typeof i.name === 'string' && i.name.length <= 200)))
 
 /** a saved value is used only when it has the right type (old or damaged files never break the app) */
 function okValue(k, v) {
   const d = DEFAULTS[k]
   if (ENUMS[k]) return ENUMS[k].includes(v)
+  if (k === 'sepKatalog') return typeof v === 'string' && v.length <= 80
   if (k === 'shirtColor') return typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v)
   if (k === 'crop') return v === null || (Array.isArray(v) && v.length === 4 && v.every((x) => Number.isFinite(x) && x >= 0))
   if (k === 'erase') return Array.isArray(v) && v.length <= 20000 && v.every(okStroke)
@@ -320,8 +329,9 @@ export function pickSettings(s, keys) {
 }
 
 // ------------------------------------------------------------------ sablon (screen printing)
-/** the separation settings for the engine (sablon::SepSettings) */
-export function toSep(s) {
+/** the separation settings for the engine (sablon::SepSettings); `palette` = the colours
+ * of the chosen ink catalogue ([[r, g, b]], for the ink set 'katalog') */
+export function toSep(s, palette = []) {
   const num = (v, d, lo, hi) => (Number.isFinite(Number(v)) ? Math.min(hi, Math.max(lo, Number(v))) : d)
   return {
     method: s.sepMethod,
@@ -329,6 +339,7 @@ export function toSep(s) {
     inks: (s.sepInks || []).map((i) => ({ rgb: i.rgb, opacity: i.opacity, boost: num(i.boost, 0, 0, 1) })),
     // inks given one by one: the set is not used (the same inks keep the same result)
     ink_set: s.sepSet === 'saya' || (s.sepInks || []).length ? 'auto' : s.sepSet,
+    palette: s.sepSet === 'katalog' && !(s.sepInks || []).length ? palette : [],
     base_after: Math.round(num(s.sepBaseAfter, 0, 0, (s.sepInks || []).length)),
     underbase: s.sepBase === 'auto' ? null : s.sepBase === 'ya',
     choke_mm: num(s.sepChoke, 0.1, 0, 2),
@@ -362,6 +373,7 @@ export function inkSets(tone) {
   const dark = tone === 'gelap'
   return [
     ['auto', 'Otomatis dari desain', 'Automatic from the design'],
+    ['katalog', 'Dari katalog tinta (Pantone / merek)', 'From an ink catalogue (Pantone / brand)'],
     ['dasar', dark ? '6 warna dasar + abu' : '6 warna dasar + hitam', dark ? '6 basic colours + grey' : '6 basic colours + black'],
     ...(dark ? [['dasar-abu-dulu', '6 warna dasar, abu dicetak dulu', '6 basic colours, grey printed first']] : []),
     ['hemat', dark ? 'Hemat: kuning, merah, biru' : 'Hemat: kuning, merah, biru, hitam', dark ? 'Cheap: yellow, red, blue' : 'Cheap: yellow, red, blue, black'],

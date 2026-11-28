@@ -480,3 +480,109 @@ fn all_white_design_on_black_does_not_crash() {
     let r = separate(&p, &settings(Shirt::Hitam), &SepSettings { colors: 4, ..Default::default() });
     assert!(!r.films.is_empty());
 }
+
+/// part of the basic Pantone screen-printing colours (code: hex)
+const KATALOG: [[u8; 3]; 14] = [
+    [0xff, 0xff, 0xff], // White
+    [0x10, 0x18, 0x20], // Black 6 C
+    [0xda, 0x29, 0x1c], // 485 C red
+    [0xba, 0x0c, 0x2f], // 200 C
+    [0xfe, 0xdd, 0x00], // Yellow C
+    [0xff, 0xc7, 0x2c], // 123 C
+    [0xff, 0x82, 0x00], // 151 C
+    [0x00, 0x33, 0xa0], // 286 C
+    [0x0c, 0x23, 0x40], // 289 C navy
+    [0x00, 0x9a, 0x44], // 347 C
+    [0x97, 0x99, 0x9b], // Cool Gray 7 C
+    [0xc8, 0xc9, 0xc7], // Cool Gray 3 C
+    [0x4f, 0x2c, 0x1d], // 4625 C
+    [0xdd, 0xcb, 0xa4], // 468 C
+];
+
+fn katalog_sep(method: Method) -> SepSettings {
+    SepSettings { ink_set: InkSet::Katalog, palette: KATALOG.to_vec(), colors: 6, method, lpi: 35.0, angle: 22.5, ..Default::default() }
+}
+
+/// "Simulasi dari Stok": every ink is a catalogue colour as it is (no made-up ink),
+/// the catalogue white is the highlight (last), no near-black ink on a black shirt
+#[test]
+fn catalogue_inks_are_exact_catalogue_colours() {
+    let p = design();
+    for (shirt, black) in [(Shirt::Hitam, false), (Shirt::Putih, true)] {
+        let r = separate(&p, &settings(shirt), &katalog_sep(Method::Simulasi));
+        let rgb: Vec<[u8; 3]> = r.inks.iter().map(|i| i.rgb).collect();
+        println!("{shirt:?}: {rgb:?} dE {:.2}", r.delta_e);
+        assert!(rgb.iter().all(|c| KATALOG.contains(c)), "only catalogue colours: {rgb:?}");
+        let has = |f: &dyn Fn([u8; 3]) -> bool| rgb.iter().any(|&c| f(c));
+        assert!(has(&|c| c == [0xda, 0x29, 0x1c] || c == [0xba, 0x0c, 0x2f]), "a catalogue red");
+        assert!(has(&|c| c == [0xfe, 0xdd, 0x00] || c == [0xff, 0xc7, 0x2c]), "a catalogue yellow");
+        assert!(has(&|c| c == [0x00, 0x33, 0xa0]), "the catalogue blue");
+        if black {
+            assert!(rgb.iter().all(|&c| c != [255, 255, 255]), "no white ink on a white shirt");
+        } else {
+            assert_eq!(*rgb.last().unwrap(), [255, 255, 255], "highlight white last");
+            assert!(!rgb.contains(&[0x10, 0x18, 0x20]), "no black ink on a black shirt");
+        }
+        assert!(r.delta_e < 8.0, "dE {}", r.delta_e);
+    }
+}
+
+/// "Spot Pantone": a flat design gets the nearest catalogue ink per colour, printed
+/// solid, and no ink that adds nothing
+#[test]
+fn catalogue_spot_on_a_flat_design() {
+    let (w, h) = (200, 160);
+    let mut rgb = vec![0f32; w * h * 3];
+    let mut alpha = vec![0f32; w * h];
+    let srgb = |c: [u8; 3]| c.map(|v| v as f32 / 255.0);
+    for y in 10..h - 10 {
+        for x in 10..w - 10 {
+            let q = y * w + x;
+            alpha[q] = 1.0;
+            // close to (not exactly) 485 C, Yellow C and 286 C, plus white lettering
+            let c = match (x * 2 / w, y * 2 / h) {
+                (0, 0) => srgb([214, 40, 30]),
+                (1, 0) => srgb([250, 218, 10]),
+                (0, 1) => srgb([5, 50, 158]),
+                _ => [1.0, 1.0, 1.0],
+            };
+            rgb[q * 3..q * 3 + 3].copy_from_slice(&c);
+        }
+    }
+    let p = Prepared { w, h, pre_w: w, src_box: [0, 0, w, h], rgb, alpha, bg: None, bg_used: None, solid: None };
+    let r = separate(&p, &settings(Shirt::Hitam), &katalog_sep(Method::Spot));
+    let rgb: Vec<[u8; 3]> = r.inks.iter().map(|i| i.rgb).collect();
+    println!("{rgb:?} dE {:.2}", r.delta_e);
+    for c in [[0xda, 0x29, 0x1c], [0xfe, 0xdd, 0x00], [0x00, 0x33, 0xa0], [255, 255, 255]] {
+        assert!(rgb.contains(&c), "{c:?} in {rgb:?}");
+    }
+    assert_eq!(rgb.len(), 4, "only the inks the design needs: {rgb:?}");
+    assert!(r.delta_e < 2.5, "dE {}", r.delta_e);
+    // films are solid (spot): no halftone tints in the ink films
+    assert!(r.films.iter().any(|f| f.role == Role::Highlight));
+}
+
+/// a dark navy on a black shirt is left to the shirt in spot (a solid navy patch looks
+/// like a stain); an empty catalogue falls back to the automatic inks
+#[test]
+fn catalogue_spot_black_shirt_and_empty_catalogue() {
+    let (w, h) = (160, 120);
+    let mut rgb = vec![0f32; w * h * 3];
+    let mut alpha = vec![0f32; w * h];
+    for y in 10..h - 10 {
+        for x in 10..w - 10 {
+            let q = y * w + x;
+            alpha[q] = 1.0;
+            let c = if x < w / 2 { [0.02, 0.06, 0.16] } else { [0.85, 0.15, 0.1] };
+            rgb[q * 3..q * 3 + 3].copy_from_slice(&c);
+        }
+    }
+    let p = Prepared { w, h, pre_w: w, src_box: [0, 0, w, h], rgb, alpha, bg: None, bg_used: None, solid: None };
+    let r = separate(&p, &settings(Shirt::Hitam), &katalog_sep(Method::Spot));
+    let rgb: Vec<[u8; 3]> = r.inks.iter().map(|i| i.rgb).collect();
+    println!("{rgb:?}");
+    assert!(!rgb.contains(&[0x0c, 0x23, 0x40]), "no solid navy on a black shirt: {rgb:?}");
+    let empty = SepSettings { palette: Vec::new(), ..katalog_sep(Method::Simulasi) };
+    let r = separate(&p, &settings(Shirt::Hitam), &empty);
+    assert!(!r.inks.is_empty());
+}

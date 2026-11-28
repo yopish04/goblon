@@ -73,6 +73,10 @@ pub enum InkSet {
     Hemat,
     /// gold, orange, red, maroon, grey: dark, fire, vintage designs
     Gelap,
+    /// chosen from a catalogue of real inks (`SepSettings::palette`: a brand's colour
+    /// chart, the standard Pantone screen-printing colours): the best `colors` of them
+    /// for the design. With `Method::Spot`: each design colour gets one catalogue ink
+    Katalog,
 }
 
 /// how the halftone films of simulated process are screened
@@ -158,6 +162,10 @@ pub struct SepSettings {
     /// the white base and highlight make the light tones, the inks the hue, as in hand
     /// separations (a cream ink at ~100 % made flat patches in light skin and skulls)
     pub strong_inks: bool,
+    /// the catalogue the inks are chosen from with `InkSet::Katalog` (sRGB). Metallic and
+    /// fluorescent inks are left out by the caller (their screen colour is only a hint)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub palette: Vec<[u8; 3]>,
     /// angle of the white films (underbase and highlight white) when they should not
     /// share the colours' screen (e.g. 15 deg away, as in hand-made film separations:
     /// a shifted white screen gives no moire with the colours). None = the colour angle
@@ -186,6 +194,7 @@ impl Default for SepSettings {
             ink_saver: 0.0,
             max_dot: 1.0,
             strong_inks: false,
+            palette: Vec::new(),
             white_angle: None,
         }
     }
@@ -725,6 +734,136 @@ pub fn auto_inks_with(p: &Prepared, shirt: [f32; 3], n: usize, highlight: bool, 
     out
 }
 
+/// the inks of a catalogue (`palette`, sRGB) for a design on `shirt`: `n` inks in print
+/// order (the highlight white included, last). The design colours are clustered as for
+/// `auto_inks` (with the accent colours of a muted design); the inks are the `n`
+/// catalogue colours that reach those clusters best: for a simulated process alone, as
+/// tints towards the shirt / white base or two of them mixed, for spot colours (`spot`)
+/// each cluster by one ink printed solid. The ink colours are the catalogue's exactly,
+/// so the films carry the name of a tin of ink that exists.
+/// spot on a black shirt: muted inks darker than this (OKLab L) are not offered
+const SPOT_DARK_L: f32 = 0.4;
+
+pub fn catalog_inks(p: &Prepared, shirt: [f32; 3], n: usize, highlight: bool, palette: &[[u8; 3]], spot: bool) -> Vec<Ink> {
+    let n = n.clamp(1, MAX_INKS);
+    let sh = oklab(shirt.map(lin));
+    let dark = needs_underbase(shirt);
+    let px = p.w * p.h;
+    let step = (px / 150_000).max(1);
+    let mut s: Vec<[f32; 3]> = (0..px)
+        .step_by(step)
+        .filter(|&q| p.alpha[q] >= 0.5)
+        .map(|q| oklab([p.rgb[q * 3], p.rgb[q * 3 + 1], p.rgb[q * 3 + 2]].map(lin)))
+        .filter(|c| dist2(*c, sh) > NEAR_SHIRT * NEAR_SHIRT)
+        .collect();
+    let lab_of = |c: [u8; 3]| oklab(c.map(|v| lin(v as f32 / 255.0)));
+    let whiteish = |c: &[f32; 3]| c[0] > 0.86 && chroma(*c) < 0.06;
+    // the white of the catalogue (its brightest neutral) for the highlight
+    let white = palette.iter().copied().filter(|&c| whiteish(&lab_of(c))).max_by(|a, b| lab_of(*a)[0].total_cmp(&lab_of(*b)[0])).unwrap_or([255, 255, 255]);
+    if s.is_empty() {
+        return Vec::new();
+    }
+    let use_white = dark && highlight && n >= 2 && s.iter().filter(|c| whiteish(c)).count() * 200 > s.len();
+    if use_white {
+        s.retain(|c| !whiteish(c));
+        if s.is_empty() {
+            return vec![Ink::new(white, 0.85)];
+        }
+    }
+    let k = if use_white { n - 1 } else { n };
+    let targets = design_clusters(&s, k);
+    // candidates: the catalogue without whites (the base / highlight make white),
+    // without colours of (about) the shirt, and on a black shirt without near-blacks
+    let mut cand: Vec<([u8; 3], [f32; 3])> = palette
+        .iter()
+        .map(|&c| (c, lab_of(c)))
+        .filter(|(_, l)| !whiteish(l) && dist2(*l, sh) > NEAR_SHIRT * NEAR_SHIRT)
+        .filter(|(_, l)| !(sh[0] < BLACK_SHIRT_L && blackish(*l)))
+        // spot on a black shirt: a solid dark, muted ink (navy, dark brown) only looks
+        // like a stain next to the shirt; those design areas are left to the shirt.
+        // Dark but strong inks (286 C blue, Reflex Blue) stay
+        .filter(|(_, l)| !(spot && sh[0] < BLACK_SHIRT_L && l[0] < SPOT_DARK_L && chroma(*l) < 0.1))
+        .collect();
+    cand.sort_by(|a, b| a.0.cmp(&b.0));
+    cand.dedup_by(|a, b| a.0 == b.0);
+    let base_white = dark || sh[0] > 0.9;
+    let err = |t: [f32; 3], set: &[[f32; 3]]| -> f32 {
+        if spot {
+            // one ink printed solid (on the base), or nothing (the shirt)
+            set.iter().map(|&a| dist2(t, a)).fold(dist2(t, sh), f32::min).sqrt()
+        } else {
+            reach(t, set, sh, base_white)
+        }
+    };
+    let total = |set: &[[f32; 3]]| -> f32 { targets.iter().map(|(t, w)| w.powf(0.6) * err(*t, set)).sum() };
+    let k = k.min(cand.len());
+    let mut pick: Vec<usize> = Vec::new();
+    while pick.len() < k {
+        let labs: Vec<[f32; 3]> = pick.iter().map(|&i| cand[i].1).collect();
+        let now = total(&labs);
+        let best = (0..cand.len())
+            .filter(|i| !pick.contains(i))
+            .map(|i| {
+                let mut s2 = labs.clone();
+                s2.push(cand[i].1);
+                (total(&s2), i)
+            })
+            .min_by(|a, b| a.0.total_cmp(&b.0));
+        match best {
+            // an ink that changes (almost) nothing (under 1 % better) is not worth a screen
+            Some((v, i)) if pick.is_empty() || v < now * 0.99 - 1e-4 => pick.push(i),
+            _ => break,
+        }
+    }
+    for _ in 0..3 {
+        let mut better = false;
+        for j in 0..pick.len() {
+            let labs: Vec<[f32; 3]> = pick.iter().map(|&i| cand[i].1).collect();
+            let now = total(&labs);
+            let alt = (0..cand.len())
+                .filter(|i| !pick.contains(i))
+                .map(|i| {
+                    let mut s2 = labs.clone();
+                    s2[j] = cand[i].1;
+                    (total(&s2), i)
+                })
+                .min_by(|a, b| a.0.total_cmp(&b.0));
+            if let Some((v, i)) = alt {
+                if v < now - 1e-6 {
+                    pick[j] = i;
+                    better = true;
+                }
+            }
+        }
+        if !better {
+            break;
+        }
+    }
+    let mut out: Vec<Ink> = pick.iter().map(|&i| Ink::new(cand[i].0, if blackish(cand[i].1) { 0.9 } else { default_opacity() })).collect();
+    print_order(&mut out);
+    if use_white {
+        out.push(Ink::new(white, 0.85));
+    }
+    out
+}
+
+/// the design colours as weighted clusters (OKLab, share): `k * 4` k-means clusters
+/// following the bulk, plus the accent colours of a muted design (see `auto_inks`)
+fn design_clusters(s: &[[f32; 3]], k: usize) -> Vec<([f32; 3], f32)> {
+    let mut cand = kmeans_inks(s, (k * 4).clamp(k.max(1), 32));
+    let muted = cand.iter().all(|(c, _)| chroma(*c) < ACCENT_CHROMA);
+    let sat: Vec<[f32; 3]> = if muted { s.iter().copied().filter(|c| chroma(*c) >= ACCENT_CHROMA).collect() } else { Vec::new() };
+    if sat.len() * 200 >= s.len() && sat.len() >= 20 {
+        let share = sat.len() as f32 / s.len() as f32;
+        for (c, w) in kmeans_inks(&sat, (k * 2).clamp(2, 12)) {
+            if cand.iter().all(|(o, _)| dist2(*o, c) >= 0.04 * 0.04) {
+                cand.push((c, w * share));
+            }
+        }
+    }
+    cand
+}
+
 /// a near-black ink (OKLab)
 fn blackish(c: [f32; 3]) -> bool {
     c[0] < 0.3 && chroma(c) < 0.05
@@ -764,7 +903,7 @@ pub fn preset_inks(set: InkSet, shirt: [f32; 3], highlight: bool) -> (Vec<Ink>, 
     let base = needs_underbase(shirt);
     let dark = sh[0] < 0.45;
     let mut rgb: Vec<[u8; 3]> = match set {
-        InkSet::Auto => return (Vec::new(), 0),
+        InkSet::Auto | InkSet::Katalog => return (Vec::new(), 0),
         InkSet::Dasar | InkSet::DasarAbuDulu => vec![KUNING, MERAH, MAGENTA, BIRU, CYAN, HIJAU],
         InkSet::Hemat => vec![KUNING, MERAH, BIRU],
         InkSet::Gelap => vec![EMAS, ORANYE, MERAH_API, MARUN],
@@ -1207,7 +1346,9 @@ pub fn separate(p: &Prepared, s: &Settings, sep: &SepSettings) -> Separation {
     let base = sep.underbase.unwrap_or_else(|| needs_underbase(shirt)).then_some(sep.base_opacity);
     let (inks, base_after) = if !sep.inks.is_empty() {
         (sep.inks.clone(), sep.base_after.min(sep.inks.len()))
-    } else if sep.ink_set == InkSet::Auto {
+    } else if sep.ink_set == InkSet::Katalog && !sep.palette.is_empty() {
+        (catalog_inks(p, shirt, sep.colors, sep.highlight, &sep.palette, sep.method == Method::Spot), 0)
+    } else if sep.ink_set == InkSet::Auto || sep.ink_set == InkSet::Katalog {
         (auto_inks_with(p, shirt, sep.colors, sep.highlight, sep.strong_inks), 0)
     } else {
         preset_inks(sep.ink_set, shirt, sep.highlight)

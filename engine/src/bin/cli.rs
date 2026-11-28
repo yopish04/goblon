@@ -149,6 +149,10 @@ struct Args {
     /// with --sablon: strong inks only on dark shirts (no pastel / cream ink)
     #[arg(long)]
     tinta_kuat: bool,
+    /// with --sablon: choose the inks from this catalogue (a text file, one ink per
+    /// line: "#RRGGBB name ..."; implies --set-tinta katalog)
+    #[arg(long)]
+    palet: Option<PathBuf>,
     /// with --sablon: angle of the white films (underbase, highlight) on their own
     /// screen, e.g. 7.5 with colours at 22.5 (default: the colour angle)
     #[arg(long, allow_hyphen_values = true)]
@@ -467,13 +471,24 @@ fn main() -> Result<()> {
                 x => bail!("unknown --metode {x} (simulasi | index | spot)"),
             },
             colors: n,
-            ink_set: serde_json::from_value(serde_json::Value::String(a.set_tinta.clone())).map_err(|_| anyhow::anyhow!("unknown --set-tinta {}", a.set_tinta))?,
+            ink_set: if a.palet.is_some() { studiozea_engine::sablon::InkSet::Katalog } else { serde_json::from_value(serde_json::Value::String(a.set_tinta.clone())).map_err(|_| anyhow::anyhow!("unknown --set-tinta {}", a.set_tinta))? },
             dot_style: serde_json::from_value(serde_json::Value::String(a.gaya_titik.clone())).map_err(|_| anyhow::anyhow!("unknown --gaya-titik {}", a.gaya_titik))?,
             expand_px: a.expand,
             drop_below: a.buang,
             boost: a.boost / 100.0,
             ink_saver: a.hemat_tinta / 100.0,
             max_dot: a.titik_maks / 100.0,
+            palette: match &a.palet {
+                Some(f) => std::fs::read_to_string(f)?
+                    .lines()
+                    .filter_map(|l| {
+                        let h = l.trim().strip_prefix('#')?.get(..6)?;
+                        let v = u32::from_str_radix(h, 16).ok()?;
+                        Some([(v >> 16) as u8, (v >> 8) as u8, v as u8])
+                    })
+                    .collect(),
+                None => Vec::new(),
+            },
             strong_inks: a.tinta_kuat,
             white_angle: a.sudut_putih,
             // --bentuk for the films too when given (default: the elliptical sim-process dot)
