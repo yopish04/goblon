@@ -213,3 +213,32 @@ export function catalogsFromSheets(sheets) {
   // a plain sheet equal to the built-in standard list (the user's own copy of it) is left out
   return [...out.values()].filter((c) => !(c.sheet && c.inks.every((i) => std.has(i.h)))).map(({ sheet, ...c }) => c).slice(0, 100)
 }
+
+// ------------------------------------------------------------------ nearest colour
+const lin = (v) => ((v /= 255) <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
+/** OKLab of an 8-bit colour */
+export function lab8(c) {
+  const [r, g, b] = c.map(lin)
+  const l = Math.cbrt(0.4122 * r + 0.5363 * g + 0.0514 * b)
+  const m = Math.cbrt(0.2119 * r + 0.6807 * g + 0.1074 * b)
+  const s = Math.cbrt(0.0883 * r + 0.2817 * g + 0.63 * b)
+  return [0.2105 * l + 0.7936 * m - 0.0041 * s, 1.978 * l - 2.4286 * m + 0.4506 * s, 0.0259 * l + 0.7828 * m - 0.8087 * s]
+}
+/** the ink of `cat` closest to `rgb` (ΔE = OKLab x 100): a normal ink for a normal one,
+ * a neon / metallic one for a neon / metallic one when the brand has it.
+ * Returns { ink, dE } or null */
+export function nearestIn(cat, rgb, kind = null) {
+  const a = lab8(rgb)
+  const pool = cat.inks.filter((i) => inkKind(i) === kind)
+  let best = null
+  for (const ink of pool.length ? pool : cat.inks.filter((i) => !inkKind(i))) {
+    const b = lab8(hexToRgb8(ink.h))
+    const d = Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) * 100
+    if (!best || d < best.dE) best = { ink, dE: d }
+  }
+  return best
+}
+/** short brand name for a label ("Pantone" for the standard list) */
+export const brandName = (cat) => (cat.id === STD_ID ? 'Pantone' : cat.name)
+/** the ink's own name without the brand: "P-OP 4430 Red", "Merah Terang" */
+export const inkShort = (ink, cat) => (ink.c && cat.id !== STD_ID && !String(ink.n).includes(ink.c) ? `${ink.c} ${ink.n}` : ink.n)

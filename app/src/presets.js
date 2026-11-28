@@ -295,10 +295,10 @@ export const textFineLpi = (lpi, dpi) => Math.max(lpi, Math.min(Math.max(lpi * 2
 const okStroke = (s) => s && BRUSH_MODES.includes(s.mode) && Number.isFinite(s.r) && s.r >= 0.5 && s.r <= 5000 &&
   Array.isArray(s.pts) && s.pts.length > 0 && s.pts.every((p) => Array.isArray(p) && p.length === 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]))
 
-/** a valid ink list ([{rgb, opacity, boost?, name?}], at most 12; name = the catalogue ink) */
+/** a valid ink list ([{rgb, opacity, boost?, name?, catId?}], at most 12; name / catId = the catalogue ink and its catalogue) */
 export const okInks = (v) => Array.isArray(v) && v.length <= 12 && v.every((i) => i && Array.isArray(i.rgb) && i.rgb.length === 3 && i.rgb.every((c) => Number.isInteger(c) && c >= 0 && c <= 255) &&
   Number.isFinite(i.opacity) && i.opacity >= 0.05 && i.opacity <= 1 && (i.boost === undefined || (Number.isFinite(i.boost) && i.boost >= 0 && i.boost <= 1)) &&
-  (i.name === undefined || (typeof i.name === 'string' && i.name.length <= 200)))
+  (i.name === undefined || (typeof i.name === 'string' && i.name.length <= 200)) && (i.catId === undefined || (typeof i.catId === 'string' && i.catId.length <= 80)))
 
 /** a saved value is used only when it has the right type (old or damaged files never break the app) */
 function okValue(k, v) {

@@ -5,7 +5,7 @@ import { open, save } from '@tauri-apps/plugin-dialog'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import logoMark from './logo-mark.svg'
 import { SEP_PRESETS, AI_DENOISE, AI_MAX_PX, LOW_DPI, aiScaleFor, ANGLES, DEFAULTS, IMAGE_KEYS, isTextMode, textFineLpi, shirtFor, DPIS, SIZES, LOOK_KEYS, PROJECT_KEYS, mergeSettings, pickSettings, LPI_MAX, LPI_MIN, PATTERNS, PRESETS, SHAPES, newTexture, optLabel, sizeLabel, shirtCss, toJob, toSep, inkName, rgbHex, hexRgb, okInks, shirtTone, inkSets } from './presets.js'
-import { STD, STD_ID, ALL_ID, allCatalog, inkKind, catalogPalette, inkTitle, inkLine, splitLine, findInk, okCatalogs, readXlsx, catalogsFromSheets, hexToRgb8 } from './katalog.js'
+import { STD, STD_ID, ALL_ID, allCatalog, inkKind, catalogPalette, inkTitle, inkRef, inkLine, splitLine, findInk, okCatalogs, readXlsx, catalogsFromSheets, hexToRgb8, lab8, nearestIn, brandName, inkShort } from './katalog.js'
 import CanvasViewer from './CanvasViewer.jsx'
 import { Help, Menu, NumField, Row, Seg, Slider, fmt, unpack } from './ui.jsx'
 import Icon from './icons.jsx'
@@ -567,6 +567,7 @@ export default function App() {
   // ink names: the catalogue ink chosen by hand, else the catalogue ink with exactly this
   // colour (inks chosen from a catalogue), else the nearest common ink colour
   const catInk = (rgb) => findInk(rgb, allCats, activeCat.id)
+  const sameHex = (h, rgb) => h.toLowerCase() === rgbHex(rgb)
   const inkLabel = (rgb, role, name) => {
     if (role === 'underbase' || role === 'highlight') {
       const w = s.sepSet === 'katalog' ? catInk(rgb) : null
@@ -1475,8 +1476,8 @@ export default function App() {
   const inkRows = [...inkList.map((ink, i) => ({ ink, i })).slice(0, baseAt), ...(hasBase ? [{ base: true }] : []), ...inkList.map((ink, i) => ({ ink, i })).slice(baseAt)]
   // a change to the rows: the inks become a list set by hand
   const editRows = (fn) => {
-    const named = (ink) => { const c = ink.name ? null : catInk(ink.rgb); return ink.name || (c ? inkLine(c.ink, c.cat) : undefined) }
-    const rows = fn(inkRows.map((r) => (r.base ? r : { ink: { rgb: r.ink.rgb, opacity: r.ink.opacity, boost: r.ink.boost || 0, name: named(r.ink) } })))
+    const named = (ink) => { if (ink.name) return { name: ink.name, catId: ink.catId }; const c = catInk(ink.rgb); return c ? { name: inkLine(c.ink, c.cat), catId: c.cat.id } : {} }
+    const rows = fn(inkRows.map((r) => (r.base ? r : { ink: { rgb: r.ink.rgb, opacity: r.ink.opacity, boost: r.ink.boost || 0, ...named(r.ink) } })))
     const b = rows.findIndex((r) => r.base)
     set({ sepInks: rows.filter((r) => !r.base).map((r) => r.ink), sepBaseAfter: b < 0 ? Math.min(baseAt, rows.length) : b })
   }
@@ -1486,10 +1487,43 @@ export default function App() {
   const setOpts = [...sets, ...(myInks ? [['saya', 'Tinta saya', 'My inks']] : [])]
   if (!setOpts.some((o) => o[0] === s.sepSet)) setOpts.push([s.sepSet, ...(inkSets('gelap').concat(inkSets('warna')).find((o) => o[0] === s.sepSet) || [s.sepSet, 'Tinta saya', 'My inks']).slice(1)])
   // an ink from a catalogue for ink row i (any brand)
-  const chooseCatInk = (i, ci, cat) => {
+  const chooseCatInk = (target, ci, cat) => {
     const rgb = hexToRgb8(ci.h)
-    editRows((l) => l.map((x) => (x.ink && x === l.filter((y) => !y.base)[i] ? { ink: { ...x.ink, rgb, name: inkLine(ci, cat) } } : x)))
+    const [Lk, a, b] = lab8(rgb)
+    const fresh = { rgb, opacity: Lk < 0.3 && Math.hypot(a, b) < 0.05 ? 0.9 : 0.6, boost: 0, name: inkLine(ci, cat), catId: cat.id }
+    if (target === 'new') {
+      editRows((l) => {
+        // a new ink goes before a highlight white (that stays last)
+        const lastInk = l.length && !l[l.length - 1].base && l[l.length - 1].ink.rgb.every((v) => v === 255) ? l.length - 1 : l.length
+        return [...l.slice(0, lastInk), { ink: fresh }, ...l.slice(lastInk)]
+      })
+    } else {
+      editRows((l) => l.map((x) => (x.ink && x === l.filter((y) => !y.base)[target] ? { ink: { ...x.ink, rgb, name: fresh.name, catId: cat.id } } : x)))
+    }
     setInkPick(null)
+  }
+  // ink i to another brand: that brand's closest colour (same kind: neon for neon)
+  const swapBrand = (i, ink, catId, kind, title) => {
+    const cat = allCats.find((c) => c.id === catId)
+    const near = cat && nearestIn(cat, ink.rgb, kind)
+    if (!near) return
+    chooseCatInk(i, near.ink, cat)
+    flash(L(`${title} → ${brandName(cat)} ${inkShort(near.ink, cat)}`, `${title} → ${brandName(cat)} ${inkShort(near.ink, cat)}`) + (near.dE > 4 ? L(` (warnanya beda sedikit, ΔE ${Math.round(near.dE)}: cek pratinjau)`, ` (a slightly different colour, ΔE ${Math.round(near.dE)}: check the preview)`) : ''))
+  }
+  // what a row shows: the catalogue ink (its brand, name, Pantone) or the stored name
+  const inkInfo = (ink) => {
+    let hit = null
+    if (ink.catId) {
+      const cat = allCats.find((c) => c.id === ink.catId)
+      const ci = cat?.inks.find((x) => sameHex(x.h, ink.rgb))
+      if (ci) hit = { ink: ci, cat }
+    }
+    if (!hit) {
+      hit = catInk(ink.rgb)
+      if (hit && ink.name && inkLine(hit.ink, hit.cat) !== ink.name) hit = null
+    }
+    if (hit) return { cat: hit.cat, title: inkShort(hit.ink, hit.cat), ref: inkRef(hit.ink, hit.cat), kind: inkKind(hit.ink) }
+    return ink.name ? { cat: null, ...splitLine(ink.name), kind: inkKind({ n: ink.name }) } : null
   }
   const pickId = pickCatId ?? activeCat.id
   const pickCats = pickId === ALL_ID ? allCats : [allCats.find((c) => c.id === pickId) || STD]
@@ -1523,7 +1557,45 @@ export default function App() {
       setErr(L('Impor katalog gagal: ', 'Catalogue import failed: ') + (x?.message || x))
     }
   }
-  const chooseSet = (v) => (v === 'saya' && myInks ? set({ sepSet: 'saya', sepInks: myInks.inks, sepBaseAfter: myInks.baseAfter }) : set({ sepSet: v, sepInks: [], sepBaseAfter: 0 }))
+  // the catalogue picker: replace ink `target` (index) or add one ('new')
+  const catPicker = (target, curHex, heading) => (
+    <div className="catpick" onKeyDown={(e) => e.key === 'Escape' && setInkPick(null)}>
+      <div className="catpick-head">
+        <span>{heading}</span>
+        <button className="ibtn" type="button" title={L('Tutup', 'Close')} onClick={() => setInkPick(null)}><Icon name="x" size={13} /></button>
+      </div>
+      <div className="catchips">
+        {allCats.length > 1 && <button type="button" className={'chipbtn' + (pickId === ALL_ID ? ' on' : '')} onClick={() => setPickCatId(ALL_ID)}>{L('Semua', 'All')}<span>{everyCat.inks.length}</span></button>}
+        {allCats.map((c) => <button key={c.id} type="button" className={'chipbtn' + (pickId === c.id ? ' on' : '')} onClick={() => setPickCatId(c.id)}>{c.id === STD_ID ? L('Pantone standar', 'Standard Pantone') : c.name}<span>{c.inks.length}</span></button>)}
+      </div>
+      <label className="catsearch">
+        <Icon name="zoomin" size={14} />
+        <input type="search" autoFocus placeholder={L('Cari nama, kode, atau Pantone…', 'Search name, code or Pantone…')} value={pickQ} onChange={(e) => setPickQ(e.target.value)} />
+      </label>
+      <div className="catscroll">
+        {pickGroups.map((g) => (
+          <div key={g.key} className="catgroup">
+            {g.name && <div className="catgroup-name">{g.name}<span>{g.items.length}</span></div>}
+            <div className="catgrid">
+              {g.items.map(({ ci, cat }, k) => {
+                const kd = inkKind(ci)
+                const cur = !!curHex && ci.h.toLowerCase() === curHex.toLowerCase()
+                return (
+                  <button key={k} type="button" className={'cattile' + (kd ? ` ${kd}` : '') + (cur ? ' cur' : '')} title={`${inkLine(ci, cat)}${ci.s ? ` · ${ci.s}` : ''} · ${ci.h}`} onClick={() => chooseCatInk(target, ci, cat)}>
+                    <span className="cattile-sw" style={{ '--c': ci.h }}>{kd && <i>{kd === 'neon' ? 'N' : 'M'}</i>}{cur && <Icon name="check" size={14} />}</span>
+                    <span className="cattile-nm">{cat.id === STD_ID ? ci.n : ci.c || ci.n}</span>
+                    <span className="cattile-ref">{cat.id === STD_ID ? (ci.c === 'White' ? '' : ci.c) : ci.c ? ci.n : ci.p || ''}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+        {!pickGroups.length && <p className="small">{L('Tidak ada yang cocok', 'Nothing matches')}</p>}
+      </div>
+    </div>
+  )
+  const chooseSet = (v) => (v === 'impor' ? xlsxRef.current?.click() : v.startsWith('katalog:') ? set({ sepSet: 'katalog', sepKatalog: v.slice(8), sepInks: [], sepBaseAfter: 0 }) : v === 'saya' && myInks ? set({ sepSet: 'saya', sepInks: myInks.inks, sepBaseAfter: myInks.baseAfter }) : set({ sepSet: v, sepInks: [], sepBaseAfter: 0 }))
   const dE = res?.sablon ? res.delta_e : null
   const dEText = dE == null ? null : dE < 3 ? L('sangat mirip', 'very close') : dE < 6 ? L('mirip', 'close') : dE < 10 ? L('cukup, bisa tambah warna', 'fair, add a colour') : L('jauh, tambah warna', 'far, add colours')
   const sim = s.sepMethod === 'simulasi'
@@ -1541,8 +1613,15 @@ export default function App() {
       </Row>
       <Row label={L('Set tinta', 'Ink set')}
         hint={L('Otomatis: tinta dipilih dari warna desain (paling mirip, jumlahnya bisa diatur). Set tetap: tinta standar yang biasa ada di workshop, disesuaikan dengan warna kaos (kaos gelap: underbase, abu dan highlight putih; kaos putih / berwarna: dengan hitam). Filmnya tetap dihitung dengan model cetak, jadi tidak perlu Boost manual. Tinta yang hampir tidak terpakai dibuang. Tinta saya: daftar tinta yang Anda simpan sendiri.', 'Automatic: inks chosen from the design colours (closest, the number can be set). Fixed sets: standard inks most shops stock, fitted to the shirt colour (dark shirts: underbase, grey and highlight white; white / coloured shirts: with black). The films are still computed with the print model, so no manual boost is needed. Inks that would print almost nothing are dropped. My inks: an ink list you saved yourself.')}>
-        <select value={s.sepSet} onChange={(e) => chooseSet(e.target.value)}>
-          {setOpts.map((o) => <option key={o[0]} value={o[0]}>{L(o[1], o[2])}</option>)}
+        <select value={s.sepSet === 'katalog' ? `katalog:${activeCat.id}` : s.sepSet} onChange={(e) => chooseSet(e.target.value)}>
+          <optgroup label={L('Merek tinta (nama sesuai katalog merek)', 'Ink brand (names from the brand chart)')}>
+            {allCats.map((c) => <option key={c.id} value={`katalog:${c.id}`}>{c.id === STD_ID ? L('Pantone sablon standar', 'Standard Pantone screen-print') : c.name} · {c.inks.length} {L('warna', 'colours')}</option>)}
+            {catalogs.length > 0 && <option value={`katalog:${ALL_ID}`}>{L('Semua merek', 'All brands')} · {everyCat.inks.length} {L('warna', 'colours')}</option>}
+            <option value="impor">{L('+ Impor merek dari Excel (.xlsx)…', '+ Import brands from Excel (.xlsx)…')}</option>
+          </optgroup>
+          <optgroup label={L('Tanpa merek', 'No brand')}>
+            {setOpts.filter((o) => o[0] !== 'katalog').map((o) => <option key={o[0]} value={o[0]}>{L(o[1], o[2])}</option>)}
+          </optgroup>
         </select>
       </Row>
       {s.sepSet === 'katalog' && (
@@ -1556,11 +1635,8 @@ export default function App() {
             : s.sepMethod === 'index' ? L('Kotak index dari tinta katalog: warna tajam tanpa moire.', 'Index squares from catalogue inks: crisp colours, no moiré.')
               : L('Titik halftone dari tinta yang ada di stok. Paling pas untuk desain foto dan gradasi.', 'Halftone dots from the inks you stock. Best for photo and gradient art.')}</p>
           <div className="catcard-row">
-            <select value={activeCat.id} onChange={(e) => set({ sepKatalog: e.target.value, sepInks: [], sepBaseAfter: 0 })} title={L('Katalog tinta (merek)', 'Ink catalogue (brand)')}>
-              {allCats.map((c) => <option key={c.id} value={c.id}>{c.id === STD_ID ? L(STD.name, STD.en) : c.name} · {c.inks.length}</option>)}
-              {catalogs.length > 0 && <option value={ALL_ID}>{L('Semua katalog', 'All catalogues')} · {everyCat.inks.length}</option>}
-            </select>
-            <button className="btn" type="button" title={L('Impor katalog warna merek dari file Excel (.xlsx)', 'Import brand colour charts from an Excel file (.xlsx)')} onClick={() => xlsxRef.current?.click()}><Icon name="plus" size={14} /><span>{L('Impor', 'Import')}</span></button>
+            <div className="catname"><small>{L('Merek tinta', 'Ink brand')}</small><b>{activeCat.id === STD_ID ? L(STD.name, STD.en) : activeCat.id === ALL_ID ? L('Semua merek', 'All brands') : activeCat.name}</b></div>
+            <button className="btn" type="button" title={L('Impor katalog warna merek dari file Excel (.xlsx)', 'Import brand colour charts from an Excel file (.xlsx)')} onClick={() => xlsxRef.current?.click()}><Icon name="plus" size={14} /><span>{L('Impor merek', 'Import brands')}</span></button>
             {activeCat.id !== STD_ID && activeCat.id !== ALL_ID && <button className="btn icon" type="button" title={L('Hapus katalog ini dari komputer ini', 'Remove this catalogue from this computer')}
               onClick={() => { setCatalogs((o) => o.filter((c) => c.id !== activeCat.id)); set({ sepKatalog: STD_ID, sepInks: [], sepBaseAfter: 0 }) }}><Icon name="x" size={14} /></button>}
           </div>
@@ -1611,8 +1687,10 @@ export default function App() {
           const { ink, i } = r
           const role = f ? f.role : i === inkList.length - 1 && ink.rgb.every((v) => v === 255) && hasBase ? 'highlight' : 'ink'
           const label = inkLabel(ink.rgb, role, ink.name)
-          const { title, ref } = splitLine(label)
-          const kind = role === 'ink' ? inkKind({ n: label }) : null
+          const info = inkInfo(ink)
+          const title = role === 'ink' ? info?.title || L(...inkName(ink.rgb, role)) : L(...inkName(ink.rgb, role))
+          const ref = role === 'ink' ? info?.ref || '' : info && info.cat?.id !== STD_ID ? info.title : ''
+          const kind = role === 'ink' ? info?.kind || null : null
           const hex = rgbHex(ink.rgb)
           const open = inkPick === i
           return (
@@ -1621,9 +1699,14 @@ export default function App() {
               <label className={'inksw' + (kind ? ` ${kind}` : '')} style={{ '--c': hex }} title={L('Klik: warna bebas', 'Click: any colour')}>
                 <span className="inkno">{no}</span>
                 <input type="color" value={hex}
-                  onChange={(e) => { const rgb = hexRgb(e.target.value); editRows((l) => l.map((x) => (x.ink && x === l.filter((y) => !y.base)[i] ? { ink: { ...x.ink, rgb, name: undefined } } : x))) }} />
+                  onChange={(e) => { const rgb = hexRgb(e.target.value); editRows((l) => l.map((x) => (x.ink && x === l.filter((y) => !y.base)[i] ? { ink: { ...x.ink, rgb, name: undefined, catId: undefined } } : x))) }} />
               </label>
               <div className="inkmain">
+                <select className={'brandsel' + (info?.cat ? '' : ' free')} value={info?.cat ? info.cat.id : ''} title={L('Merek tinta. Ganti merek: dipilih warna terdekat dari merek itu (mis. hijau dari merek yang Anda punya)', 'Ink brand. Another brand: its closest colour is used (e.g. the green of the brand you have)')}
+                  onChange={(e) => swapBrand(i, ink, e.target.value, kind, title)}>
+                  {!info?.cat && <option value="">{L('Warna bebas', 'Free colour')}</option>}
+                  {allCats.map((c) => <option key={c.id} value={c.id}>{brandName(c)}</option>)}
+                </select>
                 <div className="inktitle" title={label}>{title}{kind && <span className={'kindpill ' + kind} title={kind === 'neon' ? L('Neon: di pratinjau lebih kusam dari aslinya; cetak di atas underbase penuh', 'Neon: duller in the preview than in print; print on a full underbase') : L('Metalik: kilaunya tidak tampak di pratinjau; biasanya dicetak terakhir, padat', 'Metallic: its shine does not show in the preview; usually printed last, solid')}>{kind === 'neon' ? 'Neon' : L('Metalik', 'Metallic')}</span>}</div>
                 <div className="inksub">
                   {ref && <span className="ref">{ref}</span>}
@@ -1647,55 +1730,17 @@ export default function App() {
               </div>
               {bar}
             </div>
-            {open && (
-              <div className="catpick" onKeyDown={(e) => e.key === 'Escape' && setInkPick(null)}>
-                <div className="catpick-head">
-                  <span>{L('Ganti tinta', 'Replace ink')} {no}</span>
-                  <button className="ibtn" type="button" title={L('Tutup', 'Close')} onClick={() => setInkPick(null)}><Icon name="x" size={13} /></button>
-                </div>
-                <div className="catchips">
-                  {allCats.length > 1 && <button type="button" className={'chipbtn' + (pickId === ALL_ID ? ' on' : '')} onClick={() => setPickCatId(ALL_ID)}>{L('Semua', 'All')}<span>{everyCat.inks.length}</span></button>}
-                  {allCats.map((c) => <button key={c.id} type="button" className={'chipbtn' + (pickId === c.id ? ' on' : '')} onClick={() => setPickCatId(c.id)}>{c.id === STD_ID ? L('Pantone standar', 'Standard Pantone') : c.name}<span>{c.inks.length}</span></button>)}
-                </div>
-                <label className="catsearch">
-                  <Icon name="zoomin" size={14} />
-                  <input type="search" autoFocus placeholder={L('Cari nama, kode, atau Pantone…', 'Search name, code or Pantone…')} value={pickQ} onChange={(e) => setPickQ(e.target.value)} />
-                </label>
-                <div className="catscroll">
-                  {pickGroups.map((g) => (
-                    <div key={g.key} className="catgroup">
-                      {g.name && <div className="catgroup-name">{g.name}<span>{g.items.length}</span></div>}
-                      <div className="catgrid">
-                        {g.items.map(({ ci, cat }, k) => {
-                          const kd = inkKind(ci)
-                          const cur = ci.h.toLowerCase() === hex.toLowerCase()
-                          return (
-                            <button key={k} type="button" className={'cattile' + (kd ? ` ${kd}` : '') + (cur ? ' cur' : '')} title={`${inkLine(ci, cat)}${ci.s ? ` · ${ci.s}` : ''} · ${ci.h}`} onClick={() => chooseCatInk(i, ci, cat)}>
-                              <span className="cattile-sw" style={{ '--c': ci.h }}>{kd && <i>{kd === 'neon' ? 'N' : 'M'}</i>}{cur && <Icon name="check" size={14} />}</span>
-                              <span className="cattile-nm">{cat.id === STD_ID ? ci.n : ci.c || ci.n}</span>
-                              <span className="cattile-ref">{cat.id === STD_ID ? (ci.c === 'White' ? '' : ci.c) : ci.c ? ci.n : ci.p || ''}</span>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                  {!pickGroups.length && <p className="small">{L('Tidak ada yang cocok', 'Nothing matches')}</p>}
-                </div>
-              </div>
-            )}
+            {open && catPicker(i, hex, `${L('Ganti tinta', 'Replace ink')} ${no}`)}
             </React.Fragment>
           )
         })}
+        {inkPick === 'new' && catPicker('new', null, L('Tambah tinta', 'Add an ink'))}
         <div className="btnrow">
-          <button className="btn" type="button" disabled={inkList.length >= 12 || !inkList.length} onClick={() => editRows((l) => {
-            // a new ink goes before a highlight white (that stays last)
-            const lastInk = l.length && !l[l.length - 1].base && l[l.length - 1].ink.rgb.every((v) => v === 255) ? l.length - 1 : l.length
-            return [...l.slice(0, lastInk), { ink: { rgb: [128, 128, 128], opacity: 0.6, boost: 0 } }, ...l.slice(lastInk)]
-          })}><Icon name="plus" /><span>{L('Tinta', 'Ink')}</span></button>
+          <button className={'btn' + (inkPick === 'new' ? ' on' : '')} type="button" disabled={inkList.length >= 12 || !inkList.length} title={L('Tambah tinta dari katalog (merek mana pun)', 'Add an ink from a catalogue (any brand)')}
+            onClick={() => { setInkPick(inkPick === 'new' ? null : 'new'); setPickQ('') }}><Icon name="plus" /><span>{L('Tambah tinta', 'Add ink')}</span></button>
           {s.sepInks.length > 0 && s.sepSet !== 'saya' && <button className="btn" type="button" onClick={() => set({ sepInks: [], sepBaseAfter: 0 })}><Icon name="reset" /><span>{s.sepSet === 'auto' ? L('Otomatis lagi', 'Automatic again') : L('Kembali ke set', 'Back to the set')}</span></button>}
           {inkList.length > 0 && <button className="btn" type="button" title={L('Simpan daftar tinta ini (urutan + boost) sebagai "Tinta saya", mis. tinta yang ada di gudang', 'Save this ink list (order + boost) as "My inks", e.g. the inks you have in stock')}
-            onClick={() => { const v = { inks: inkList.map((x) => { const c = x.name ? null : catInk(x.rgb); const name = x.name || (c ? inkLine(c.ink, c.cat) : undefined); return { rgb: x.rgb, opacity: x.opacity, boost: x.boost || 0, ...(name ? { name } : {}) } }), baseAfter: baseAt }; setMyInks(v); set({ sepSet: 'saya', sepInks: v.inks, sepBaseAfter: v.baseAfter }); flash(L('Tersimpan sebagai Tinta saya', 'Saved as My inks')) }}>
+            onClick={() => { const v = { inks: inkList.map((x) => { const c = x.name ? null : catInk(x.rgb); const name = x.name || (c ? inkLine(c.ink, c.cat) : undefined); const catId = x.name ? x.catId : c?.cat.id; return { rgb: x.rgb, opacity: x.opacity, boost: x.boost || 0, ...(name ? { name } : {}), ...(catId ? { catId } : {}) } }), baseAfter: baseAt }; setMyInks(v); set({ sepSet: 'saya', sepInks: v.inks, sepBaseAfter: v.baseAfter }); flash(L('Tersimpan sebagai Tinta saya', 'Saved as My inks')) }}>
             <Icon name="save" /><span>{L('Simpan sbg Tinta saya', 'Save as My inks')}</span></button>}
         </div>
         {inkRows.length > 0 && <p className="small">{L('↑ ↓ mengatur urutan cetak (underbase juga bisa dipindah, mis. abu dicetak sebelum underbase). Klik kotak warna untuk warna bebas, atau', '↑ ↓ set the print order (the underbase can move too, e.g. grey before it). Click a swatch for any colour, or')} <Icon name="layers" size={12} /> {L('untuk tinta Pantone / merek mana pun.', 'for a Pantone / any brand ink.')}
