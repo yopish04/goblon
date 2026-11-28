@@ -5,7 +5,7 @@ import { open, save } from '@tauri-apps/plugin-dialog'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 import logoMark from './logo-mark.svg'
 import { SEP_PRESETS, AI_DENOISE, AI_MAX_PX, LOW_DPI, aiScaleFor, ANGLES, DEFAULTS, IMAGE_KEYS, isTextMode, textFineLpi, shirtFor, DPIS, SIZES, LOOK_KEYS, PROJECT_KEYS, mergeSettings, pickSettings, LPI_MAX, LPI_MIN, PATTERNS, PRESETS, SHAPES, newTexture, optLabel, sizeLabel, shirtCss, toJob, toSep, inkName, rgbHex, hexRgb, okInks, shirtTone, inkSets } from './presets.js'
-import { STD, STD_ID, inkKind, catalogPalette, inkTitle, inkLine, splitLine, findInk, okCatalogs, readXlsx, catalogsFromSheets, hexToRgb8 } from './katalog.js'
+import { STD, STD_ID, ALL_ID, allCatalog, inkKind, catalogPalette, inkTitle, inkLine, splitLine, findInk, okCatalogs, readXlsx, catalogsFromSheets, hexToRgb8 } from './katalog.js'
 import CanvasViewer from './CanvasViewer.jsx'
 import { Help, Menu, NumField, Row, Seg, Slider, fmt, unpack } from './ui.jsx'
 import Icon from './icons.jsx'
@@ -206,7 +206,8 @@ export default function App() {
   // one is built in), kept in the local settings file only
   const [catalogs, setCatalogs] = useState([])
   const allCats = useMemo(() => [STD, ...catalogs], [catalogs])
-  const activeCat = allCats.find((c) => c.id === s.sepKatalog) || STD
+  const everyCat = useMemo(() => allCatalog(allCats), [allCats])
+  const activeCat = s.sepKatalog === ALL_ID && catalogs.length ? everyCat : allCats.find((c) => c.id === s.sepKatalog) || STD
   const catPalette = useMemo(() => catalogPalette(activeCat), [activeCat])
   const xlsxRef = useRef(null)
   const [inkPick, setInkPick] = useState(null) // ink row with the catalogue picker open
@@ -1490,7 +1491,8 @@ export default function App() {
     editRows((l) => l.map((x) => (x.ink && x === l.filter((y) => !y.base)[i] ? { ink: { ...x.ink, rgb, name: inkLine(ci, cat) } } : x)))
     setInkPick(null)
   }
-  const pickCats = pickCatId === '*' ? allCats : [allCats.find((c) => c.id === pickCatId) || activeCat]
+  const pickId = pickCatId ?? activeCat.id
+  const pickCats = pickId === ALL_ID ? allCats : [allCats.find((c) => c.id === pickId) || STD]
   const pickQl = pickQ.trim().toLowerCase()
   // the picker's inks in groups: per catalogue (all), else per series / colour family
   const pickGroups = []
@@ -1556,16 +1558,18 @@ export default function App() {
           <div className="catcard-row">
             <select value={activeCat.id} onChange={(e) => set({ sepKatalog: e.target.value, sepInks: [], sepBaseAfter: 0 })} title={L('Katalog tinta (merek)', 'Ink catalogue (brand)')}>
               {allCats.map((c) => <option key={c.id} value={c.id}>{c.id === STD_ID ? L(STD.name, STD.en) : c.name} · {c.inks.length}</option>)}
+              {catalogs.length > 0 && <option value={ALL_ID}>{L('Semua katalog', 'All catalogues')} · {everyCat.inks.length}</option>}
             </select>
             <button className="btn" type="button" title={L('Impor katalog warna merek dari file Excel (.xlsx)', 'Import brand colour charts from an Excel file (.xlsx)')} onClick={() => xlsxRef.current?.click()}><Icon name="plus" size={14} /><span>{L('Impor', 'Import')}</span></button>
-            {activeCat.id !== STD_ID && <button className="btn icon" type="button" title={L('Hapus katalog ini dari komputer ini', 'Remove this catalogue from this computer')}
+            {activeCat.id !== STD_ID && activeCat.id !== ALL_ID && <button className="btn icon" type="button" title={L('Hapus katalog ini dari komputer ini', 'Remove this catalogue from this computer')}
               onClick={() => { setCatalogs((o) => o.filter((c) => c.id !== activeCat.id)); set({ sepKatalog: STD_ID, sepInks: [], sepBaseAfter: 0 }) }}><Icon name="x" size={14} /></button>}
           </div>
           <div className="catstrip">
-            {activeCat.inks.slice(0, 120).map((ci, k) => { const kd = inkKind(ci); return <span key={k} className={'catdot' + (kd ? ` ${kd}` : '')} style={{ '--c': ci.h }} title={inkLine(ci, activeCat)} /> })}
+            {activeCat.inks.map((ci, k) => { const kd = inkKind(ci); return <span key={k} className={'catdot' + (kd ? ` ${kd}` : '')} style={{ '--c': ci.h }} title={inkLine(ci, ci.from || activeCat)} /> })}
           </div>
           <div className="catcard-foot">
-            <span><b>{catPalette.length}</b> {L('warna dipilih otomatis', 'colours chosen automatically')}</span>
+            <span><b>{activeCat.inks.length}</b> {L('warna di katalog', 'colours in the catalogue')}</span>
+            <span><b>{catPalette.length}</b> {L('bisa dipilih otomatis', 'can be chosen automatically')}</span>
             {specialCount > 0 && <span><b>{specialCount}</b> {L('neon / metalik: manual', 'neon / metallic: by hand')}</span>}
           </div>
         </div>
@@ -1650,8 +1654,8 @@ export default function App() {
                   <button className="ibtn" type="button" title={L('Tutup', 'Close')} onClick={() => setInkPick(null)}><Icon name="x" size={13} /></button>
                 </div>
                 <div className="catchips">
-                  {allCats.map((c) => <button key={c.id} type="button" className={'chipbtn' + (pickCatId !== '*' && (pickCats[0] || activeCat).id === c.id ? ' on' : '')} onClick={() => setPickCatId(c.id)}>{c.id === STD_ID ? L('Pantone standar', 'Standard Pantone') : c.name}</button>)}
-                  {allCats.length > 1 && <button type="button" className={'chipbtn' + (pickCatId === '*' ? ' on' : '')} onClick={() => setPickCatId('*')}>{L('Semua', 'All')}</button>}
+                  {allCats.length > 1 && <button type="button" className={'chipbtn' + (pickId === ALL_ID ? ' on' : '')} onClick={() => setPickCatId(ALL_ID)}>{L('Semua', 'All')}<span>{everyCat.inks.length}</span></button>}
+                  {allCats.map((c) => <button key={c.id} type="button" className={'chipbtn' + (pickId === c.id ? ' on' : '')} onClick={() => setPickCatId(c.id)}>{c.id === STD_ID ? L('Pantone standar', 'Standard Pantone') : c.name}<span>{c.inks.length}</span></button>)}
                 </div>
                 <label className="catsearch">
                   <Icon name="zoomin" size={14} />

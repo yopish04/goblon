@@ -329,6 +329,7 @@ input.tiny { width: 54px; flex: none; }
 .catchips { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
 .chipbtn { flex: none; padding: 3px 10px; border-radius: 13px; border: 1px solid var(--line); background: var(--card); color: var(--muted); font-size: 11.5px; cursor: pointer; white-space: nowrap; }
 .chipbtn:hover { color: var(--text); border-color: var(--line-hover); }
+.chipbtn span { margin-left: 5px; opacity: .6; font-size: 10.5px; }
 .chipbtn.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
 .catsearch { display: flex; align-items: center; gap: 6px; padding: 0 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--field); color: var(--muted); }
 .catsearch:focus-within { border-color: var(--accent); }
@@ -354,7 +355,7 @@ input.tiny { width: 54px; flex: none; }
 .catcard-row { display: flex; gap: 6px; align-items: center; }
 .catcard-row select { flex: 1; }
 .catcard-row .btn { padding: 4px 10px; }
-.catstrip { display: flex; flex-wrap: wrap; gap: 3px; max-height: 50px; overflow: hidden; }
+.catstrip { display: flex; flex-wrap: wrap; gap: 3px; max-height: 88px; overflow-y: auto; padding-right: 2px; scrollbar-width: thin; }
 .catdot { width: 14px; height: 14px; border-radius: 4px; background-color: var(--c); border: 1px solid rgba(127, 127, 127, .35); }
 .catdot.neon { box-shadow: 0 0 5px var(--c); }
 .catcard-foot { display: flex; flex-wrap: wrap; gap: 2px 12px; color: var(--muted); font-size: 11px; }

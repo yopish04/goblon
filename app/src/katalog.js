@@ -40,6 +40,12 @@ export function inkKind(ink) {
 export const hexToRgb8 = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16))
 const sameRgb = (a, b) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2]
 
+export const ALL_ID = '*'
+/** every catalogue as one (ink set "all catalogues"): the brand stays in each ink's name */
+export function allCatalog(cats) {
+  return { id: ALL_ID, name: 'Semua katalog', en: 'All catalogues', inks: cats.flatMap((c) => c.inks.map((i) => ({ ...i, from: c }))) }
+}
+
 /** the colours the engine may choose from (no neon / metallic, no duplicates) */
 export function catalogPalette(cat) {
   const out = []
@@ -190,7 +196,9 @@ export function catalogsFromSheets(sheets) {
       if (!n) continue
       const b = (brand >= 0 && r[brand]) || name
       const id = `x:${b}`.slice(0, 80)
-      if (!out.has(id)) out.set(id, { id, name: b.slice(0, 80), inks: [] })
+      // a brand column: one catalogue per brand (kept even when its colours equal
+      // standard Pantone ones); without one: one per sheet
+      if (!out.has(id)) out.set(id, { id, name: b.slice(0, 80), inks: [], sheet: brand < 0 })
       const ink = { h: `#${m[1].toUpperCase()}`, n }
       if (code >= 0 && r[code] && r[code] !== n) ink.c = r[code].slice(0, 60)
       if (pan >= 0 && r[pan]) {
@@ -202,5 +210,6 @@ export function catalogsFromSheets(sheets) {
       if (cat.inks.length < 2000) cat.inks.push(ink)
     }
   }
-  return [...out.values()].filter((c) => !c.inks.every((i) => std.has(i.h))).slice(0, 100)
+  // a plain sheet equal to the built-in standard list (the user's own copy of it) is left out
+  return [...out.values()].filter((c) => !(c.sheet && c.inks.every((i) => std.has(i.h)))).map(({ sheet, ...c }) => c).slice(0, 100)
 }
